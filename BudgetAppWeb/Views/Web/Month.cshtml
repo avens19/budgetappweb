@@ -1,0 +1,198 @@
+﻿@model BudgetAppWeb.Models.Budget
+
+@{
+    ViewBag.Title = "Month";
+}
+
+@section styles{
+<style>
+    .table>thead>tr>td,.table>tbody>tr>td,.table>tfoot>tr>td{
+        padding-left: 1px;
+        padding-right: 1px
+    }
+</style>
+}
+
+@section title{
+    <a href="/Budget/@Model.UniqueId" class="navbar-brand">Weekly Budget</a>
+}
+
+@section nav{
+<button type="button" style="display: inline; color: white;" data-bind="click: goToWeek" class="btn btn-default navbar-btn navbar-inverse">
+    Week
+</button>
+}
+
+<div style="text-align: center; display: block; margin-left: auto; margin-right: auto">
+    <button class="btn btn-default" style="font-size: 25px; line-height: 85%; margin-top: -15px" data-bind="click: monthBack">&#8592;</button> <span style="font-size: 25px" data-bind="text: months[month()]"></span> <button class="btn btn-default" style="font-size: 25px; line-height: 85%; margin-top: -15px" data-bind="click: monthAhead">&#8594;</button>
+</div>
+
+<table class="table table-bordered" data-bind="visible: weeks().length > 0">
+    <thead>
+        <tr>
+            <td data-bind="text: days[(startDay()+0)%7]"></td>
+            <td data-bind="text: days[(startDay()+1)%7]"></td>
+            <td data-bind="text: days[(startDay()+2)%7]"></td>
+            <td data-bind="text: days[(startDay()+3)%7]"></td>
+            <td data-bind="text: days[(startDay()+4)%7]"></td>
+            <td data-bind="text: days[(startDay()+5)%7]"></td>
+            <td data-bind="text: days[(startDay()+6)%7]"></td>
+            <td style="text-align: right">Total</td>
+        </tr>
+    </thead>
+    <tbody data-bind="foreach: weeks">
+        <tr>
+            <td data-bind="text: weekStart().addDays(0).getDate()"></td>
+            <td data-bind="text: weekStart().addDays(1).getDate()"></td>
+            <td data-bind="text: weekStart().addDays(2).getDate()"></td>
+            <td data-bind="text: weekStart().addDays(3).getDate()"></td>
+            <td data-bind="text: weekStart().addDays(4).getDate()"></td>
+            <td data-bind="text: weekStart().addDays(5).getDate()"></td>
+            <td data-bind="text: weekStart().addDays(6).getDate()"></td>
+            <td style="text-align: right" data-bind="text: '$' + total().toFixed(2),style:{color: isUnder() ? 'black' : 'red'}"></td>
+        </tr>
+    </tbody>
+    <tfoot>
+        <tr>
+            <td style="text-align: right" colspan="7">Total for Month: </td>
+            <td style="text-align: right" data-bind="text: '$' + total().toFixed(2)"></td>
+        </tr>
+    </tfoot>
+</table>
+
+@section scripts{
+    <script type="text/javascript">
+    function Expense(data) {
+        var date = new Date(data.Date );
+        date = new Date( date.getTime() + ( date.getTimezoneOffset() * 60000 ) );
+        this.id = ko.observable(data.Id);
+        this.date = ko.observable(date);
+        this.description = ko.observable(data.Description);
+        this.amount = ko.observable(data.Amount);
+    }
+    function Week(weekStart, expenses){
+        var self = this;
+        this.expenses = ko.observable(expenses);
+        this.weekStart = ko.observable(weekStart);
+        this.total = ko.computed(function(){
+            var total = 0;
+            for(var i = 0; i<self.expenses().length; i++)
+            {
+                total += self.expenses()[i].amount();
+            }
+            return total;
+        });
+        var amount = @Model.Amount;
+        this.limit = ko.observable(amount);
+        this.isUnder = ko.computed(function(){
+            return self.total() <= self.limit();
+        });
+    }
+        function MonthViewModel() {
+        var self = this;
+
+        var today = new Date();
+        var weekStart = today;
+
+        while(weekStart.getDate() > 1)
+        {
+            weekStart = weekStart.addDays(-1);
+        }
+
+        this.monthStart = ko.observable(weekStart);
+
+        this.month = ko.computed(function(){
+            return self.monthStart().getMonth();
+        });
+
+        this.weeks = ko.observableArray();
+        this.total = ko.computed(function(){
+            var total = 0;
+            for(var i = 0; i<self.weeks().length; i++)
+            {
+                for(var j = 0;j<self.weeks()[i].expenses().length; j++)
+                {
+                    if(self.weeks()[i].expenses()[j].date().getMonth() == self.month())
+                        total += self.weeks()[i].expenses()[j].amount();
+                }
+            }
+            return total;
+        });
+        this.days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        this.months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+
+        var startDay = @Model.StartDay;
+        this.startDay = ko.observable(startDay);
+
+        this.monthViewStart = ko.computed(function(){
+            var weekStrt = self.monthStart();
+
+            while(weekStrt.getDay() != self.startDay())
+            {
+                weekStrt = weekStrt.addDays(-1);
+            }
+
+            return weekStrt;
+        });
+
+        function loadData()
+        {
+            self.weeks.removeAll();
+            var current = self.monthViewStart();
+            var first = true;
+            $.ajaxSetup({
+                async: false
+            });
+            while(first || current.getMonth() == self.month())
+            {
+                // Load initial state from server, convert it to Task instances, then populate self.tasks
+                $.getJSON("/api/Budget/@Model.UniqueId/Week/" + current.getTime(), function (allData) {
+                    var mappedExpenses = $.map(allData, function (item) { return new Expense(item); });
+                    self.weeks.push(new Week(current, mappedExpenses));
+                });
+                current = current.addDays(7);
+                first = false;
+            }
+            $.ajaxSetup({
+                async: true
+            });
+        }
+
+        loadData();
+
+        this.monthBack = function(){
+            var monthStart = self.monthStart();
+            var month = monthStart.getMonth() - 1;
+            if(month < 0)
+            {
+                month = 11;
+                monthStart.setYear(monthStart.getYear() - 1);
+            }
+            monthStart.setMonth(month);
+            self.monthStart(monthStart);
+            loadData();
+        };
+
+        this.monthAhead = function(){
+            var monthStart = self.monthStart();
+            var month = monthStart.getMonth() + 1;
+            if(month > 11)
+            {
+                month = 0;
+                monthStart.setYear(monthStart.getYear() + 1);
+            }
+            monthStart.setMonth(month);
+            self.monthStart(monthStart);
+            loadData();
+        };
+
+        this.goToWeek = function() {
+            var id = "@Model.UniqueId";
+            window.location.href = "/Budget/" + id;
+        };
+    }
+
+    var vm = new MonthViewModel();
+    ko.applyBindings(vm);
+</script>
+}

@@ -1,0 +1,156 @@
+﻿@model BudgetAppWeb.Models.Budget
+
+@{
+    ViewBag.Title = "Weekly Budget";
+}
+
+@section title{
+    <a href="/Budget/@Model.UniqueId" class="navbar-brand">Weekly Budget</a>
+}
+
+@section nav{
+<button type="button" style="display: inline; color: white;" data-bind="click: goToMonth" class="btn btn-default navbar-btn navbar-inverse">
+    Month
+</button>
+
+<button type="button" data-bind="click: add" style="display: inline; color: white; font-size: 28px; padding: 10px; line-height: 45%" class="btn btn-default navbar-btn navbar-inverse">
+    +
+</button>
+}
+
+<div style="text-align: center; display: block; margin-left: auto; margin-right: auto">
+    <button class="btn btn-default" style="font-size: 25px; line-height: 85%; margin-top: -15px" data-bind="click: weekBack">&#8592;</button> <span style="font-size: 25px" data-bind="text: (weekStart().getMonth() + 1) + '/' + weekStart().getDate() + ' - ' + (weekEnd().getMonth() + 1) + '/' + weekEnd().getDate()"></span> <button class="btn btn-default" style="font-size: 25px; line-height: 85%; margin-top: -15px" data-bind="click: weekAhead">&#8594;</button>
+</div>
+
+<div style="text-align: right">
+    <p style="font-size: large" data-bind="text: (isUnder() ? 'Remaining' : 'Over') + ': $' + remaining().toFixed(2), style:{color: isUnder() ? 'black' : 'red'}">
+</div>
+
+<table id="expenseTable" class="table" data-bind="visible: expenses().length > 0">
+    <thead>
+        <tr>
+            <td>Day</td>
+            <td>Description</td>
+            <td style="text-align: right">Amount</td>
+        </tr>
+    </thead>
+    <tbody data-bind="foreach: expenses">
+        <tr class="selectableRow" data-bind="click: $root.expenseClick" data-toggle="modal" data-target="#editExpenseDialog">
+            <td data-bind="text: $root.days[date().getDay()]"></td>
+            <td data-bind="text: description"></td>
+            <td style="text-align: right" data-bind="text: '$' + amount().toFixed(2)"></td>
+        </tr>
+    </tbody>
+</table>
+
+<div style="text-align: right">
+    <a href="/Budget/@Model.UniqueId/Edit">Edit Budget</a>
+</div>
+
+<div class="modal fade" id="editExpenseDialog" style="display: none">
+    <div class="modal-dialog">
+        <div class="modal-content" style="text-align: center; width: 300px; margin-left: auto; margin-right: auto">
+            <div style="padding: 10px">
+                <button style="width: 280px" data-bind="click: editExpense" class="btn btn-default">Edit Expense</button>
+            </div>
+            <div style="padding: 10px">
+                <button style="width: 280px;" type="button" class="btn btn-default" data-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script type="text/javascript">
+        function Expense(data) {
+            var date = new Date(data.Date );
+            date = new Date( date.getTime() + ( date.getTimezoneOffset() * 60000 ) );
+            this.id = ko.observable(data.Id);
+            this.date = ko.observable(date);
+            this.description = ko.observable(data.Description);
+            this.amount = ko.observable(data.Amount);
+        }
+        function BudgetViewModel() {
+            var self = this;
+            var currentExpense = null;
+
+            this.expenses = ko.observableArray();
+            this.total = ko.computed(function(){
+                var total = 0;
+                for(var i = 0; i<self.expenses().length; i++)
+                {
+                    total += self.expenses()[i].amount();
+                }
+                return total;
+            });
+            var amount = @Model.Amount;
+            this.limit = ko.observable(amount);
+            this.isUnder = ko.computed(function(){
+                return self.total() <= self.limit();
+            });
+            this.remaining = ko.computed(function() {
+                return Math.abs(self.limit() - self.total());
+            });
+            this.days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+            this.add = function(){
+                window.location.href = "/Budget/@Model.UniqueId/Add";
+            };
+
+            var today = new Date();
+            var weekStart = today;
+            var startDay = @Model.StartDay;
+
+            while(weekStart.getDay() != startDay)
+            {
+                weekStart = weekStart.addDays(-1);
+            }
+
+            this.weekStart = ko.observable(weekStart);
+            this.weekEnd = ko.observable(weekStart.addDays(6));
+
+            function loadData()
+            {
+                // Load initial state from server, convert it to Task instances, then populate self.tasks
+                $.getJSON("/api/Budget/@Model.UniqueId/Week/" + self.weekStart().getTime(), function (allData) {
+                    var mappedExpenses = $.map(allData, function (item) { return new Expense(item); });
+                    self.expenses(mappedExpenses);
+                });
+            }
+
+            loadData();
+
+            this.weekBack = function(){
+                self.weekStart(self.weekStart().addDays(-7));
+                self.weekEnd(self.weekEnd().addDays(-7));
+                loadData();
+            };
+
+            this.weekAhead = function(){
+                self.weekStart(self.weekStart().addDays(7));
+                self.weekEnd(self.weekEnd().addDays(7));
+                loadData();
+            };
+
+            this.goToMonth = function(){
+                window.location.href = "/Budget/@Model.UniqueId/Month";
+            };
+
+            this.expenseClick = function(expense) {
+                currentExpense = expense;
+            };
+
+            this.editExpense = function() {
+                if(currentExpense)
+                    window.location.href = "/Budget/@Model.UniqueId/Edit/" + currentExpense.id();
+            };
+        }
+
+        var vm = new BudgetViewModel();
+        ko.applyBindings(vm);
+
+        var first = @(ViewBag.First ? "true" : "false");
+
+        if(first)
+            alert("Please bookmark this page or save it to your home screen");
+</script>
+}

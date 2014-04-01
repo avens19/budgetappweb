@@ -1,0 +1,10 @@
+﻿.center{
+    text-align: center;
+    margin: 10px
+}
+.selectableRow:hover{
+    background: #C2F0FF
+}
+.selecatbleRow:active{
+    background: #44c9f5
+}

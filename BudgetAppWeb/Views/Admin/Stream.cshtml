@@ -1,0 +1,36 @@
+﻿
+@{
+    ViewBag.Title = "Event Stream";
+}
+
+@section title{
+    <a href="#" class="navbar-brand">Weekly Budget</a>
+}
+
+<h2>Stream</h2>
+
+<ul data-bind="foreach: events">
+    <li data-bind="text: $data"></li>
+</ul>
+
+@section scripts
+{
+    <script src="~/signalr/hubs"></script>
+
+    <script type="text/javascript">
+        function StreamViewModel() {
+            var self = this;
+            this.events = ko.observableArray();
+
+            var streamHubProxy = $.connection.streamHub;
+            streamHubProxy.client.newEvent = function (message) {
+                self.events.unshift(message);
+            };
+            $.connection.hub.start().done(function () {
+                self.events.removeAll();
+            });
+        }
+
+        ko.applyBindings(new StreamViewModel());
+    </script>
+}

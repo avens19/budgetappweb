@@ -1,0 +1,63 @@
+﻿@model BudgetAppWeb.Models.Budget
+
+@{
+    ViewBag.Title = "Add Expense";
+}
+
+@section title{
+    <a href="/Budget/@Model.UniqueId" class="navbar-brand">Weekly Budget</a>
+}
+
+<div class="center">
+    Date
+    <br/>
+    <input class="form-control" data-bind="value: date" type="text" id="datepicker"/>
+</div>
+
+<div class="center">
+    Description
+    <br/>
+    <input class="form-control" data-bind="value: description" type="text" />
+</div>
+
+<div class="center">
+    Amount
+    <br />
+    <input class="form-control" data-bind="value: amount" type="number" />
+</div>
+
+<div class="center">
+    <button class="btn btn-default" data-bind="click: addExpense">Add</button>
+</div>
+
+@section scripts{
+    <script>
+        $(function () {
+            $("#datepicker").datepicker();
+        });
+    </script>
+    <script>
+        function AddExpenseViewModel() {
+            var d = new Date();
+            this.date = ko.observable(d.toLocaleDateString());
+            this.description = ko.observable();
+            this.amount = ko.observable();
+
+            var budgetId = "@Model.UniqueId";
+
+            var self = this;
+
+            this.addExpense = function () {
+                $.ajax("/api/Expense", {
+                    data: ko.toJSON({ date: self.date(), description: self.description(), amount: self.amount(), budgetId: budgetId }),
+                    type: "post", contentType: "application/json",
+                    success: function () {
+                        window.location.href = '/Budget/' + budgetId;
+                    }
+                });
+            };
+        }
+
+        ko.applyBindings(new AddExpenseViewModel());
+    </script>
+}

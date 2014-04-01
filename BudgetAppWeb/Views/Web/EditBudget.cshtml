@@ -1,0 +1,54 @@
+﻿@model BudgetAppWeb.Models.Budget
+@{
+    ViewBag.Title = "Edit Budget";
+}
+
+@section title{
+    <a href="/" class="navbar-brand">Weekly Budget</a>
+}
+
+<h3>Edit Budget</h3>
+
+<div>
+    Choose the day your weekly budget will start on
+    <br />
+    <select class="form-control" data-bind="options: dates, value: startDay"></select>
+</div>
+<div>
+    Enter the amount you would like to spend each week
+    <br />
+    <input class="form-control" type="text" data-bind="value: amount" placeholder="$0.00" />
+</div>
+<div>
+    Here is the unique ID for your budget. You may share it or use it to sync to a different device
+    <br />
+    <p style="font-weight: bold" data-bind="text: uniqueId"></p>
+</div>
+<div class="center">
+    <button class="btn btn-default" data-bind="click: newBudget">Edit Budget</button>
+</div>
+
+@section scripts{
+    <script type="text/javascript">
+        function NewBudgetViewModel() {
+            this.startDay = ko.observable("@Model.StartDayOfWeek");
+            this.dates = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+            this.amount = ko.observable("@Model.Amount.ToString("N2")");
+            this.uniqueId = ko.observable("@Model.UniqueId");
+
+            var uniqueId = this.uniqueId();
+
+            this.newBudget = function () {
+                $.ajax("/api/Budget/@Model.UniqueId", {
+                    data: ko.toJSON({ startDayOfWeek: this.startDay(), amount: this.amount(), uniqueId: this.uniqueId() }),
+                    type: "put", contentType: "application/json",
+                    success: function () {
+                        window.location.href = '/Budget/' + uniqueId;
+                    }
+                });
+            };
+        }
+
+        ko.applyBindings(new NewBudgetViewModel());
+    </script>
+}

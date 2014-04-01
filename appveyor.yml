@@ -1,0 +1,27 @@
+version: 1.0.{build}
+
+environment:
+  CONNECTION_STRING:
+    secure: kQinBVDyk2kGNB1OM2poiCAmda/JV1IDZcTfaXA+7FxNV18+RgYAjq7jWsPwJfdLzz4ZKU0UdNh830BnWnJhh9OAlc2iN1bng374pxpoItGg0BRBNdB5JKrnX8UgmuGj5Xlb1p9yhoFoAnl2q7FS2dREAlv5UKvXiTnd6zQvBmv4tM2Dx7V+5ZdGZt6Gw2AKYcFwOKCsCNNO6wjiNDWJdpLTF3cP/8uNOK/OaqbM2S0e2kFp4nmezKVJI5rD48LxvRqLF8mriMlOTMssf54wGg==
+  API_KEY:
+    secure: 5P5dXYvkzRqxvLiHyF2kJsM+N5w/qo6lBvTwSAKbBP0=
+
+skip_tags: true
+
+configuration: Release
+
+after_build:
+   - ps: (Get-Content BudgetAppWeb\web.config).replace('__CONNECTION_STRING__', "$env:CONNECTION_STRING") | Set-Content BudgetAppWeb\web.config
+   - ps: (Get-Content BudgetAppWeb\Helpers\Helpers.cs).replace('__API_KEY__', "$env:API_KEY") | Set-Content BudgetAppWeb\Helpers\Helpers.cs
+
+deploy:
+  - provider: WebDeploy
+    server: https://budgetapp.scm.azurewebsites.net
+    website: budgetapp
+    username: $budgetapp
+    password:
+      secure: zHstLfZPfLRzgv9WsJ86yJ8gsJQREjRUvtNcFQxeKeiNsA2b/iSieiTaoiqHMzEUKDKN/W5nQ0uA9aLIxqUQRQ==
+    ntlm: false
+    remove_files: false
+    on:
+      branch: master
