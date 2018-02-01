@@ -10,6 +10,9 @@ skip_tags: true
 
 configuration: Release
 
+build:
+  publish_wap: true
+
 after_build:
    - ps: (Get-Content BudgetAppWeb\web.config).replace('__CONNECTION_STRING__', "$env:CONNECTION_STRING") | Set-Content BudgetAppWeb\web.config
    - ps: (Get-Content BudgetAppWeb\Helpers\Helpers.cs).replace('__API_KEY__', "$env:API_KEY") | Set-Content BudgetAppWeb\Helpers\Helpers.cs
