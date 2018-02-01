@@ -19,7 +19,7 @@ after_build:
 
 deploy:
   - provider: WebDeploy
-    server: https://budgetapp.scm.azurewebsites.net
+    server: https://budgetapp.scm.azurewebsites.net:443/msdeploy.axd?site=budgetapp
     website: budgetapp
     username: $budgetapp
     password:
