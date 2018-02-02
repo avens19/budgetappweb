@@ -1,10 +1,11 @@
 ﻿using System;
+using System.Configuration;
 
 namespace BudgetAppWeb.Helpers
 {
     public static class Helpers
     {
-        public const string ApiKey = "__API_KEY__";
+        public static readonly string ApiKey = ConfigurationManager.AppSettings["API_KEY"];
 
         public static DateTime ToDateTime(this long l)
         {
