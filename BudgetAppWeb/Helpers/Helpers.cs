@@ -5,8 +5,6 @@ namespace BudgetAppWeb.Helpers
 {
     public static class Helpers
     {
-        public static readonly string ApiKey = ConfigurationManager.AppSettings["API_KEY"];
-
         public static DateTime ToDateTime(this long l)
         {
             //convert from Javascript time

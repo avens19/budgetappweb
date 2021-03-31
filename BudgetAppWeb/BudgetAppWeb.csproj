@@ -262,11 +262,9 @@
     <Compile Include="App_Start\RouteConfig.cs" />
     <Compile Include="App_Start\Startup.cs" />
     <Compile Include="App_Start\WebApiConfig.cs" />
-    <Compile Include="Controllers\AdminController.cs" />
     <Compile Include="Controllers\BudgetController.cs" />
     <Compile Include="Controllers\CategoriesController.cs" />
     <Compile Include="Controllers\ExpenseController.cs" />
-    <Compile Include="Controllers\StatsController.cs" />
     <Compile Include="Controllers\WebController.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
@@ -367,11 +365,7 @@
     <Content Include="Views\Web\EditBudget.cshtml" />
     <Content Include="Views\Web\EditExpense.cshtml" />
     <Content Include="Views\Web\Month.cshtml" />
-    <Content Include="Views\Admin\Budgets.cshtml" />
-    <Content Include="Views\Admin\Expenses.cshtml" />
-    <Content Include="Views\Admin\TopExpenses.cshtml" />
     <Content Include="Scripts\jquery-2.1.4.min.map" />
-    <Content Include="Views\Admin\Stream.cshtml" />
     <None Include="Web.Debug.config">
       <DependentUpon>Web.config</DependentUpon>
     </None>

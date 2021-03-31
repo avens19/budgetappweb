@@ -17,42 +17,6 @@ namespace BudgetAppWeb.Controllers
     {
         private readonly BudgetDbContext _db = new BudgetDbContext();
 
-        // GET api/Expense
-        [Route("api/Expense")]
-        public IEnumerable<Expense> GetExpenses(string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-            Log.Information("Got list of all expenses");
-            return _db.Expenses;
-        }
-
-        // GET api/Expense/5
-        [ResponseType(typeof(Expense))]
-        [Route("api/Expense/{id}")]
-        public IHttpActionResult GetExpense(long id, string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-
-            var expense = _db.Expenses.Find(id);
-            if (expense == null)
-            {
-                Log.Error("Expense not found: (1)", id);
-                return NotFound();
-            }
-
-            Log.Information("Got expense: (1)", expense);
-
-            return Ok(expense);
-        }
-
         // PUT api/Expense/5
         [Route("api/Expense/{id}")]
         public IHttpActionResult PutExpense(long id, Expense expense)
@@ -181,40 +145,6 @@ namespace BudgetAppWeb.Controllers
         private bool ExpenseExists(long id)
         {
             return _db.Expenses.Count(e => e.Id == id) > 0;
-        }
-
-        [Route("api/Expense/New")]
-        public IEnumerable<Expense> GetNewExpenses(string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-
-            Log.Information("Admin got recent expenses");
-            return _db.Expenses.OrderByDescending(b => b.DateCreated).Take(20);
-
-        }
-
-        [Route("api/Expense/Top")]
-        public IEnumerable<object> GetTopExpenses(string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-
-            var counts = _db.Expenses.GroupBy(e => e.Description).OrderByDescending(g => g.Count()).Select(g => new
-            {
-                Description = g.Key,
-                Count = g.Count()
-            }).Take(20);
-
-            Log.Information("Admin got top expenses");
-
-            return counts;
         }
     }
 }

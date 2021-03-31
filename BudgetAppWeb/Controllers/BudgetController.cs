@@ -19,21 +19,6 @@ namespace BudgetAppWeb.Controllers
 
         #region Default Handlers
 
-        // GET api/Budget
-        [Route("api/Budget")]
-        public IEnumerable<Budget> GetBudgets(string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-
-            Log.Information("Got all budgets");
-
-            return _db.Budgets;
-        }
-
         // GET api/Budget/5
         [Route("api/Budget/{id}")]
         [ResponseType(typeof(Budget))]
@@ -257,20 +242,6 @@ namespace BudgetAppWeb.Controllers
                 e.Date < weekEnd &&
                 e.IsDeleted == false
                 ).OrderBy(e => e.Date);
-        }
-
-        [Route("api/Budget/New")]
-        public IEnumerable<Budget> GetTopBudgets(string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-
-            Log.Information("Admin got recent budgets");
-
-            return _db.Budgets.OrderByDescending(b => b.DateCreated).Take(20);
         }
 
         #endregion

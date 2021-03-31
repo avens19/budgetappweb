@@ -19,39 +19,6 @@ namespace BudgetAppWeb.Controllers
     {
         private BudgetDbContext db = new BudgetDbContext();
 
-        // GET: api/Categories
-        [Route("api/Categories")]
-        public IQueryable<Category> GetCategories(string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-            Log.Information("Got list of all categories");
-            return db.Categories;
-        }
-
-        // GET: api/Categories/5
-        [ResponseType(typeof(Category))]
-        [Route("api/Categories/{id}")]
-        public IHttpActionResult GetCategory(long id, string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-
-            Category category = db.Categories.Find(id);
-            if (category == null)
-            {
-                return NotFound();
-            }
-
-            return Ok(category);
-        }
-
         // PUT: api/Categories/5
         [ResponseType(typeof(void))]
         [Route("api/Categories/{id}")]
@@ -173,40 +140,6 @@ namespace BudgetAppWeb.Controllers
         private bool CategoryExists(long id)
         {
             return db.Categories.Count(e => e.Id == id) > 0;
-        }
-
-        [Route("api/Categories/New")]
-        public IEnumerable<Category> GetNewCategories(string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-
-            Log.Information("Admin got recent categories");
-            return db.Categories.OrderByDescending(b => b.DateCreated).Take(20);
-
-        }
-
-        [Route("api/Categories/Top")]
-        public IEnumerable<object> GetTopCategories(string apiKey)
-        {
-            if (apiKey != Helpers.Helpers.ApiKey)
-            {
-                Log.Error("Invalid apiKey: (1)", apiKey);
-                return null;
-            }
-
-            var counts = db.Categories.GroupBy(c => c.Name).OrderByDescending(g => g.Count()).Select(g => new
-            {
-                Name = g.Key,
-                Count = g.Count()
-            }).Take(20);
-
-            Log.Information("Admin got top expenses");
-
-            return counts;
         }
     }
 }
