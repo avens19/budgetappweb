@@ -10,6 +10,7 @@ using System.Web.Http.Description;
 using BudgetAppWeb.Hubs;
 using BudgetAppWeb.Models;
 using BudgetAppWeb.Helpers;
+using System.Web;
 
 namespace BudgetAppWeb.Controllers
 {
@@ -187,10 +188,20 @@ namespace BudgetAppWeb.Controllers
 
             StreamHub.NewEvent(string.Format("Expenses for budget {0} were requested", id));
 
-            return _db.Expenses.Where(e =>
+            var expenses = _db.Expenses.Where(e =>
                 e.BudgetId == id &&
                 e.DateUpdated > wm
                 );
+
+            DateTime newWatermark = DateTime.UtcNow;
+
+            if (expenses.Any()) {
+                newWatermark = expenses.Max(e => e.DateUpdated);
+            }
+
+            HttpContext.Current.Response.Headers.Add("X-Watermark", newWatermark.ToString("o"));
+
+            return expenses;
         }
 
         [Route("api/Budget/{id}/Categories")]
@@ -205,10 +216,20 @@ namespace BudgetAppWeb.Controllers
 
             StreamHub.NewEvent(string.Format("Categories for budget {0} were requested", id));
 
-            return _db.Categories.Where(e =>
+            var categories = _db.Categories.Where(e =>
                 e.BudgetId == id &&
                 e.DateUpdated > wm
                 );
+
+            DateTime newWatermark = DateTime.UtcNow;
+
+            if (categories.Any()) {
+                newWatermark = categories.Max(e => e.DateUpdated);
+            }
+
+            HttpContext.Current.Response.Headers.Add("X-Watermark", newWatermark.ToString("o"));
+
+            return categories;
         }
 
         [Route("api/Budget/{id}/Week/{date}")]
