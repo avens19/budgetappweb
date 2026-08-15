@@ -4,46 +4,95 @@
 }
 
 @section title{
-    <a href="/" class="navbar-brand">Weekly Budget</a>
+    <a href="/">Weekly Budget</a>
 }
 
-<h3>New Budget</h3>
+@*
+    The landing page is where someone decides whether this app is for them, so
+    it leads with how it is meant to be used — the same explanation the Android
+    app now gives on first run.
+*@
+<section class="card mt-l">
+    <h2 class="empty__title" style="margin-bottom:10px">Budget your spending money</h2>
+    <p class="muted" style="margin:0 0 12px">
+        Work out what is left after your pay and the bills that never change —
+        rent, insurance, subscriptions. Whatever remains is your spending money.
+        Split it across the weeks in the month and that is your weekly target.
+    </p>
+    <p class="muted" style="margin:0">
+        There is deliberately nowhere to enter recurring income or expenses. If
+        money comes in mid-week, add it as an expense with a minus sign.
+    </p>
+</section>
 
-<div>
-    Choose the day your weekly budget will start on
-    <br/>
-    <select class="form-control" data-bind="options: dates, value: startDay"></select>
+<h2 class="section-head" style="margin-top:28px">Create your budget</h2>
+
+<div class="field">
+    <label class="field__label" for="name">Budget name</label>
+    <input class="field__input" id="name" type="text" data-bind="value: name" placeholder="Household" />
 </div>
-<div>
-    Enter the amount you would like to spend each week
-    <br />
-    <input class="form-control" type="text" data-bind="value: amount" placeholder="$0.00" />
+
+<div class="field">
+    <label class="field__label" for="amount">Weekly amount</label>
+    <input class="field__input" id="amount" type="number" inputmode="decimal" step="0.01"
+           data-bind="value: amount" placeholder="0.00" />
 </div>
-<div>
-    Here is the unique ID for your budget. You may share it or use it to sync to a different device
-    <br />
-    <p style="font-weight: bold" data-bind="text: uniqueId"></p>
+
+<div class="field">
+    <label class="field__label" for="startDay">Week starts on</label>
+    <select class="field__input" id="startDay" data-bind="options: dates, value: startDay"></select>
 </div>
-<div class="center">
-    <button class="btn btn-default" data-bind="click: newBudget">Create Budget</button>
+
+<section class="card">
+    <div class="id-card">
+        <div>
+            <div class="field__label" style="margin-bottom:4px">Budget ID</div>
+            <div class="id-card__value" data-bind="text: uniqueId"></div>
+            <p class="field__hint" style="margin-left:0">
+                Share this ID to open the same budget on another device, or in the Android app.
+            </p>
+        </div>
+    </div>
+</section>
+
+<div class="form-actions">
+    <button class="btn btn--block" data-bind="click: newBudget, disable: saving">Create budget</button>
 </div>
 
 @section scripts{
     <script type="text/javascript">
         function NewBudgetViewModel() {
+            var self = this;
+
+            this.name = ko.observable('');
             this.startDay = ko.observable("@Model.StartDayOfWeek");
             this.dates = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
             this.amount = ko.observable("@Model.Amount.ToString("N2")");
             this.uniqueId = ko.observable("@Model.UniqueId");
+            this.saving = ko.observable(false);
 
             var uniqueId = this.uniqueId();
 
             this.newBudget = function () {
+                if (self.amount() === '' || isNaN(parseFloat(self.amount()))) {
+                    alert('Enter a weekly amount');
+                    return;
+                }
+
+                self.saving(true);
                 $.ajax("/api/Budget", {
-                    data: ko.toJSON({ startDayOfWeek: this.startDay(), amount: this.amount(), uniqueId: this.uniqueId() }),
-                    type: "post", contentType: "application/json",
-                    success: function () {
-                        window.location.href = '/Budget/' + uniqueId;
+                    data: ko.toJSON({
+                        name: self.name() || 'My',
+                        startDayOfWeek: self.startDay(),
+                        amount: parseFloat(self.amount()),
+                        uniqueId: uniqueId
+                    }),
+                    type: "post",
+                    contentType: "application/json",
+                    success: function () { window.location.href = '/Budget/' + uniqueId; },
+                    error: function () {
+                        self.saving(false);
+                        alert('Could not create that budget. Please try again.');
                     }
                 });
             };

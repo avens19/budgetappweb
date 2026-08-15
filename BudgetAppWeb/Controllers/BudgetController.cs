@@ -10,7 +10,7 @@ using System.Web.Http.Description;
 using BudgetAppWeb.Hubs;
 using BudgetAppWeb.Models;
 using BudgetAppWeb.Helpers;
-using System.Web;
+using System.Globalization;
 
 namespace BudgetAppWeb.Controllers
 {
@@ -177,60 +177,89 @@ namespace BudgetAppWeb.Controllers
         #region Custom Handlers
 
         [Route("api/Budget/{id}/Expenses")]
-        public IEnumerable<Expense> GetExpenses(string id, string watermark)
+        public HttpResponseMessage GetExpenses(string id, string watermark)
         {
-            DateTime wm;
+            var wm = ParseWatermark(watermark);
 
-            if(!DateTime.TryParse(watermark, out wm))
-                wm = new DateTime(0);
+            // Captured before the query and used as its upper bound, so the
+            // window the response covers is exactly (wm, now]. Anything
+            // written while this request is being served falls after `now` and
+            // is picked up by the next sync instead of slipping through the
+            // gap between the query and the header.
+            var now = DateTime.UtcNow;
 
             Log.Information("Got expenses for budget (1) with watermark: (2)", id, watermark);
 
             StreamHub.NewEvent(string.Format("Expenses for budget {0} were requested", id));
 
-            var expenses = _db.Expenses.Where(e =>
-                e.BudgetId == id &&
-                e.DateUpdated > wm
-                );
+            // Materialised here rather than returned as a live IQueryable: the
+            // old version ran the query three times (Any, Max, then again
+            // during serialisation), and the last of those ran after the
+            // action returned, racing the DbContext's disposal.
+            var expenses = _db.Expenses
+                .Where(e => e.BudgetId == id && e.DateUpdated > wm && e.DateUpdated <= now)
+                .ToList();
 
-            DateTime newWatermark = DateTime.UtcNow;
-
-            if (expenses.Any()) {
-                newWatermark = expenses.Max(e => e.DateUpdated);
-            }
-
-            HttpContext.Current.Response.Headers.Add("X-Watermark", newWatermark.ToString("o"));
-
-            return expenses;
+            return WithWatermark(expenses, now);
         }
 
         [Route("api/Budget/{id}/Categories")]
-        public IEnumerable<Category> GetCategories(string id, string watermark)
+        public HttpResponseMessage GetCategories(string id, string watermark)
         {
-            DateTime wm;
-
-            if (!DateTime.TryParse(watermark, out wm))
-                wm = new DateTime(0);
+            var wm = ParseWatermark(watermark);
+            var now = DateTime.UtcNow;
 
             Log.Information("Got categories for budget (1) with watermark: (2)", id, watermark);
 
             StreamHub.NewEvent(string.Format("Categories for budget {0} were requested", id));
 
-            var categories = _db.Categories.Where(e =>
-                e.BudgetId == id &&
-                e.DateUpdated > wm
-                );
+            var categories = _db.Categories
+                .Where(e => e.BudgetId == id && e.DateUpdated > wm && e.DateUpdated <= now)
+                .ToList();
 
-            DateTime newWatermark = DateTime.UtcNow;
-
-            if (categories.Any()) {
-                newWatermark = categories.Max(e => e.DateUpdated);
-            }
-
-            HttpContext.Current.Response.Headers.Add("X-Watermark", newWatermark.ToString("o"));
-
-            return categories;
+            return WithWatermark(categories, now);
         }
+
+        /// <summary>
+        /// The fixed, sortable UTC format the watermark is exchanged in.
+        /// Fixed-width on purpose: the client stores one watermark for both
+        /// change feeds and has to pick the earlier of the two it is given,
+        /// which it does by comparing them as strings.
+        /// </summary>
+        private const string WatermarkFormat = "yyyy-MM-dd'T'HH:mm:ss.fffffff'Z'";
+
+        /// <summary>
+        /// A client with no watermark yet (missing, empty, or unparseable)
+        /// gets everything.
+        /// </summary>
+        private static DateTime ParseWatermark(string watermark)
+        {
+            DateTime parsed;
+            if (!DateTime.TryParse(watermark, CultureInfo.InvariantCulture,
+                    DateTimeStyles.AdjustToUniversal | DateTimeStyles.AssumeUniversal, out parsed))
+            {
+                return new DateTime(0, DateTimeKind.Utc);
+            }
+            return parsed;
+        }
+
+        /// <summary>
+        /// Sends <paramref name="body"/> stamped with the server's own clock.
+        /// The client stores that stamp and sends it back as the next
+        /// watermark, so the whole exchange stays on one clock; it used to
+        /// stamp its own, and any skew between the two silently dropped
+        /// changes made by another device.
+        /// </summary>
+        private HttpResponseMessage WithWatermark<T>(T body, DateTime watermark)
+        {
+            var response = Request.CreateResponse(HttpStatusCode.OK, body);
+            response.Headers.Add(WatermarkHeader,
+                watermark.ToUniversalTime().ToString(WatermarkFormat, CultureInfo.InvariantCulture));
+            return response;
+        }
+
+        /// <summary>The header the watermark travels back in.</summary>
+        public const string WatermarkHeader = "X-Watermark";
 
         [Route("api/Budget/{id}/Week/{date}")]
         public IEnumerable<Expense> GetWeek(string id, long date)

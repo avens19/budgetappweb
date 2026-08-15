@@ -4,51 +4,102 @@
 }
 
 @section title{
-    <a href="/" class="navbar-brand">Weekly Budget</a>
+    <a href="/Budget/@Model.UniqueId">Edit budget</a>
 }
 
-<h3>Edit Budget</h3>
+@section nav{
+    <a class="btn btn--text" href="/Budget/@Model.UniqueId">Cancel</a>
+}
 
-<div>
-    Choose the day your weekly budget will start on
-    <br />
-    <select class="form-control" data-bind="options: dates, value: startDay"></select>
+<div class="field mt-l">
+    <label class="field__label" for="name">Budget name</label>
+    <input class="field__input" id="name" type="text" data-bind="value: name" placeholder="Household" />
 </div>
-<div>
-    Enter the amount you would like to spend each week
-    <br />
-    <input class="form-control" type="text" data-bind="value: amount" placeholder="$0.00" />
+
+<div class="field">
+    <label class="field__label" for="amount">Weekly amount</label>
+    <input class="field__input" id="amount" type="number" inputmode="decimal" step="0.01"
+           data-bind="value: amount" placeholder="0.00" />
 </div>
-<div>
-    Here is the unique ID for your budget. You may share it or use it to sync to a different device
-    <br />
-    <p style="font-weight: bold" data-bind="text: uniqueId"></p>
+
+<div class="field">
+    <label class="field__label" for="startDay">Week starts on</label>
+    <select class="field__input" id="startDay" data-bind="options: dates, value: startDay"></select>
 </div>
-<div class="center">
-    <button class="btn btn-default" data-bind="click: newBudget">Edit Budget</button>
+
+<section class="card">
+    <div class="id-card">
+        <div>
+            <div class="field__label" style="margin-bottom:4px">Budget ID</div>
+            <div class="id-card__value" data-bind="text: uniqueId"></div>
+            <p class="field__hint" style="margin-left:0">
+                Share this ID to open the same budget on another device, or in the Android app.
+            </p>
+        </div>
+    </div>
+</section>
+
+<div class="form-actions">
+    <button class="btn btn--block" data-bind="click: save, disable: saving">Save budget</button>
 </div>
+
+@section bottomnav{
+    <nav class="bottomnav">
+        <div class="bottomnav__inner">
+            <a class="bottomnav__item" href="/Budget/@Model.UniqueId">
+                <span class="bottomnav__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 11H7v2h2v-2zm4 0h-2v2h2v-2zm4 0h-2v2h2v-2zm2-7h-1V2h-2v2H8V2H6v2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm0 16H5V9h14v11z"/></svg></span>
+                Week
+            </a>
+            <a class="bottomnav__item" href="/Budget/@Model.UniqueId/Month">
+                <span class="bottomnav__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 3h-1V1h-2v2H7V1H5v2H4a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2zm0 18H4V8h16v13zM6 10h5v5H6z"/></svg></span>
+                Month
+            </a>
+            <a class="bottomnav__item bottomnav__item--accent" href="/Budget/@Model.UniqueId/Add">
+                <span class="bottomnav__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6z"/></svg></span>
+                Add
+            </a>
+        </div>
+    </nav>
+}
 
 @section scripts{
     <script type="text/javascript">
-        function NewBudgetViewModel() {
+        function EditBudgetViewModel() {
+            var self = this;
+            var uniqueId = "@Model.UniqueId";
+
+            this.name = ko.observable(@Html.Raw(Json.Encode(Model.Name ?? "")));
             this.startDay = ko.observable("@Model.StartDayOfWeek");
             this.dates = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
             this.amount = ko.observable("@Model.Amount.ToString("N2")");
-            this.uniqueId = ko.observable("@Model.UniqueId");
+            this.uniqueId = ko.observable(uniqueId);
+            this.saving = ko.observable(false);
 
-            var uniqueId = this.uniqueId();
+            this.save = function () {
+                if (self.amount() === '' || isNaN(parseFloat(self.amount()))) {
+                    alert('Enter a weekly amount');
+                    return;
+                }
 
-            this.newBudget = function () {
-                $.ajax("/api/Budget/@Model.UniqueId", {
-                    data: ko.toJSON({ startDayOfWeek: this.startDay(), amount: this.amount(), uniqueId: this.uniqueId() }),
-                    type: "put", contentType: "application/json",
-                    success: function () {
-                        window.location.href = '/Budget/' + uniqueId;
+                self.saving(true);
+                $.ajax("/api/Budget/" + uniqueId, {
+                    data: ko.toJSON({
+                        name: self.name() || 'My',
+                        startDayOfWeek: self.startDay(),
+                        amount: parseFloat(self.amount()),
+                        uniqueId: uniqueId
+                    }),
+                    type: "put",
+                    contentType: "application/json",
+                    success: function () { window.location.href = '/Budget/' + uniqueId; },
+                    error: function () {
+                        self.saving(false);
+                        alert('Could not save that budget. Please try again.');
                     }
                 });
             };
         }
 
-        ko.applyBindings(new NewBudgetViewModel());
+        ko.applyBindings(new EditBudgetViewModel());
     </script>
 }

@@ -1,44 +1,81 @@
 ﻿<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f6fbf5" media="(prefers-color-scheme: light)">
+    <meta name="theme-color" content="#0f1511" media="(prefers-color-scheme: dark)">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="Weekly Budget">
     <title>@ViewBag.Title - Weekly Budget</title>
-    <link href="~/Content/Site.css" rel="stylesheet" type="text/css"/>
-    <link href="~/Content/themes/base/all.css" rel="stylesheet" type="text/css" />
-    <link href="~/Content/bootstrap.min.css" rel="stylesheet" type="text/css" />
-    <script src="~/Scripts/modernizr-2.8.3.js"></script>
+    <link href="~/Content/app.css" rel="stylesheet" type="text/css" />
     <link rel="SHORTCUT ICON" href="~/favicon.ico">
     @RenderSection("styles", false)
 </head>
 <body>
-    <div class="navbar navbar-inverse navbar-fixed-top">
-        <div class="container">
-            <div class="navbar-header pull-left">
-                @RenderSection("title")
-            </div>
-            <div class="navbar-header pull-right">
-                @RenderSection("nav", false)
-            </div>
+    <header class="appbar" id="appbar">
+        <div class="appbar__inner">
+            <h1 class="appbar__title">@RenderSection("title")</h1>
+            <div class="appbar__actions">@RenderSection("nav", false)</div>
         </div>
-    </div>
+    </header>
 
-    <div class="container body-content" style="margin-top: 50px">
+    <main class="container">
         @RenderBody()
-    </div>
+    </main>
 
+    @RenderSection("bottomnav", false)
+
+    @*
+        Bootstrap, jQuery UI and Modernizr are gone: the layout is flexbox and
+        CSS custom properties, the date fields are native <input type="date">,
+        and nothing referenced Modernizr. jQuery stays because every view uses
+        $.ajax / $.getJSON, and Knockout because the views are bound with it.
+    *@
     <script src="~/Scripts/jquery-2.1.4.min.js"></script>
-    <script src="~/Scripts/jquery-ui-1.11.4.min.js"></script>
-    <script src="~/Scripts/respond.min.js"></script>
     <script src="~/Scripts/knockout-3.3.0.js"></script>
-    <script src="~/Scripts/bootstrap.min.js"></script>
-    <script src="~/Scripts/jquery.signalR-2.2.0.min.js"></script>
     <script type="text/javascript">
         Date.prototype.addDays = function (days) {
             var dat = new Date(this.valueOf());
             dat.setDate(dat.getDate() + days);
             return dat;
-        }
+        };
+
+        // yyyy-MM-dd in local time, which is what <input type="date"> wants
+        // and what the API parses. toISOString would shift the day for anyone
+        // west of Greenwich.
+        window.toDateInput = function (d) {
+            var m = ('0' + (d.getMonth() + 1)).slice(-2);
+            var day = ('0' + d.getDate()).slice(-2);
+            return d.getFullYear() + '-' + m + '-' + day;
+        };
+
+        window.money = function (value) {
+            try {
+                return value.toLocaleString(undefined, {
+                    style: 'currency', currency: 'USD', minimumFractionDigits: 2
+                });
+            } catch (e) {
+                return '$' + value.toFixed(2);
+            }
+        };
+
+        window.shortDate = function (d) {
+            try {
+                return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+            } catch (e) {
+                return (d.getMonth() + 1) + '/' + d.getDate();
+            }
+        };
+
+        // The app bar only gains a rule once content scrolls under it.
+        (function () {
+            var bar = document.getElementById('appbar');
+            if (!bar) { return; }
+            var update = function () { bar.classList.toggle('is-scrolled', window.scrollY > 4); };
+            window.addEventListener('scroll', update, { passive: true });
+            update();
+        })();
     </script>
     @RenderSection("scripts", false)
 </body>
