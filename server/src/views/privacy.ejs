@@ -1,0 +1,62 @@
+<%- include('partials/head') %>
+            <div class="appbar__titles">
+                <h1 class="appbar__title"><a href="/">Privacy</a></h1>
+            </div>
+            <div class="appbar__actions"></div>
+<%- include('partials/afterbar') %>
+<article class="prose">
+    <p class="muted">Last updated 16 August 2026.</p>
+
+    <p>Weekly Budget is run by one person as a personal project. It has no
+       analytics, no advertising, no trackers and no third-party services. This
+       page describes everything it does with your data, which is not much.</p>
+
+    <h2>What is stored</h2>
+    <p>Only what you type into it:</p>
+    <ul>
+        <li>The budget's name, weekly amount, and which weekday its week starts on.</li>
+        <li>Each expense: description, amount, date, and category.</li>
+        <li>Category names.</li>
+        <li>A budget ID, generated on your device when you create a budget.</li>
+    </ul>
+    <p>That is the whole list. There are no accounts, so there is no email
+       address, no password, no name, and no phone number. Nothing is collected
+       about your device, your location, or your contacts, and nothing is used
+       to build a profile of you.</p>
+
+    <h2>Who can see it</h2>
+    <p><strong>Anyone who has your budget ID can read and change that budget.</strong>
+       That is deliberate — it is how a budget is shared between a phone, a
+       partner's phone, and this website. It also means the ID is the only thing
+       protecting the budget, so treat it like a password and only give it to
+       people you want in your budget.</p>
+    <p>Data is not sold, rented, or shared with anyone else. Nobody has access to
+       the server except its operator.</p>
+
+    <h2>Where it is stored</h2>
+    <p>On a privately operated server in Canada, in a PostgreSQL database.
+       Traffic between your device and the server is encrypted with HTTPS.</p>
+
+    <h2>Deleting your data</h2>
+    <p>Deleting an expense removes it from every device sharing the budget.
+       Deleted rows are retained on the server for a period so that other
+       devices can learn about the deletion when they next sync.</p>
+    <p>To delete a budget and everything in it, email the address below with the
+       budget ID and it will be removed. Removing a budget from a single device
+       (in the app's settings) leaves the budget itself intact for anyone else
+       using it.</p>
+
+    <h2>Children</h2>
+    <p>The app is not directed at children and collects nothing that would
+       identify anyone.</p>
+
+    <h2>Changes</h2>
+    <p>If this policy changes, the date at the top changes with it.</p>
+
+    <h2>Contact</h2>
+    <p>Questions, or a deletion request:
+       <a href="mailto:budget@andrewovens.com">budget@andrewovens.com</a></p>
+</article>
+<%- include('partials/beforenav') %>
+<%- include('partials/scripts') %>
+<%- include('partials/foot') %>

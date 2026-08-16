@@ -42,6 +42,12 @@ web.get('/Budget/:id/Categories', asyncRoute(async (req, res) => {
   res.render('categories', { title: 'Categories', budget });
 }));
 
+// Required by the App Store, and linked from the landing page. No budget
+// context: the reviewer opens it cold, and so does anyone curious.
+web.get('/privacy', (req, res) => {
+  res.render('privacy', { title: 'Privacy' });
+});
+
 // Reachable with or without a budget: the landing page links here before one
 // exists, and the app bar has to know where "Done" goes back to.
 web.get('/HowItWorks', (req, res) => {
