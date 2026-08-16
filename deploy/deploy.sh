@@ -166,17 +166,25 @@ EOF
 info "$(echo "$STATE" | tr '\n' ' ')"
 echo "$STATE" | grep -q 'db=healthy' || die "$DB_CONTAINER is not healthy — fix the database first"
 
+# Only tracked modifications block: `git reset --hard` overwrites those, but it
+# leaves untracked files alone, so they are worth mentioning and nothing more.
+# Treating them as fatal wedges the deploy after any commit that stops ignoring
+# a build directory — deleting the C# project did exactly that, leaving 22MB of
+# formerly-ignored output sitting in the checkout.
 REMOTE_STATE="$(rsh <<EOF
 cd "$REMOTE_REPO"
 echo "head=\$(git rev-parse HEAD)"
-echo "dirty=\$(git status --porcelain | wc -l | tr -d ' ')"
+echo "dirty=\$(git status --porcelain --untracked-files=no | wc -l | tr -d ' ')"
+echo "untracked=\$(git ls-files --others --exclude-standard | wc -l | tr -d ' ')"
 EOF
 )" || die "cannot read the checkout at $REMOTE_REPO"
 
 PREVIOUS_COMMIT="$(echo "$REMOTE_STATE" | sed -n 's/^head=//p')"
 REMOTE_DIRTY="$(echo "$REMOTE_STATE" | sed -n 's/^dirty=//p')"
+REMOTE_UNTRACKED="$(echo "$REMOTE_STATE" | sed -n 's/^untracked=//p')"
 info "host is on $(printf '%.7s' "$PREVIOUS_COMMIT")"
-[[ "$REMOTE_DIRTY" == 0 ]] || die "the checkout at $REMOTE_REPO has $REMOTE_DIRTY local change(s); deploying would discard them"
+[[ "$REMOTE_DIRTY" == 0 ]] || die "the checkout at $REMOTE_REPO has $REMOTE_DIRTY modified tracked file(s); deploying would discard them"
+[[ "${REMOTE_UNTRACKED:-0}" == 0 ]] || info "note: $REMOTE_UNTRACKED untracked file(s) on the host, left as they are"
 
 if [[ "$PREVIOUS_COMMIT" == "$COMMIT" ]]; then
   info "host already has this commit; rebuilding anyway"
