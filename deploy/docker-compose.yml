@@ -1,0 +1,53 @@
+# Postgres for Weekly Budget.
+#
+# The app container joins this later; for now it is just the database, so the
+# schema and the data migration off SQL Server can be done first.
+#
+#   cp .env.example .env     # then edit the password
+#   docker compose up -d
+#   docker compose logs -f db
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: budget-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-budgetapp}
+      POSTGRES_USER: ${POSTGRES_USER:-budgetapp}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      # The whole sync contract is UTC timestamps compared as strings, so the
+      # server must not be sitting in a local zone.
+      TZ: UTC
+      PGTZ: UTC
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8"
+
+    # Bound to the LAN so the migration can run from another machine. Do NOT
+    # port-forward 5432 from the router: Postgres on the open internet gets
+    # credential-stuffed within hours. If you need it from outside, tunnel it:
+    #   ssh -L 5432:localhost:5432 you@dockerhost
+    # and change this to "127.0.0.1:5432:5432".
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-budgetapp} -d ${POSTGRES_DB:-budgetapp}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+    # Small dataset, but these keep a stray query from eating the box.
+    shm_size: 256mb
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+
+volumes:
+  pgdata:
+    name: budget-pgdata
