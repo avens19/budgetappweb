@@ -12,6 +12,17 @@ first, so it is a replace rather than a merge.
 Identity values are preserved. Clients store expense and category ids locally
 and send them back, so renumbering would silently detach every device from its
 own data; the sequences are reset past the highest id afterwards.
+
+Take the source read-only before the final run. A streaming copy is not a
+snapshot, so rows committed after the cursor passes the end of a table are
+missed, and matching row counts will not reveal it — at the real cutover eleven
+expenses and one edit were lost exactly this way. Verification here compares id
+sets rather than counts, and a second pass inside the same transaction picks up
+whatever landed mid-copy, but neither is a substitute for a quiet source.
+
+Rows recovered after clients have begun syncing need DateUpdated restamped to
+now(), otherwise the change feed — which returns DateUpdated > watermark — will
+never hand them to a device that has already synced past their original time.
 """
 
 import argparse
@@ -57,6 +68,51 @@ TABLES = {
 
 # Parents first: the foreign keys are enforced here, unlike in the original.
 ORDER = ["Budgets", "Categories", "Expenses"]
+
+
+def key_of(name):
+    return "UniqueId" if name == "Budgets" else "Id"
+
+
+def late_arrivals(ms, pg, name):
+    """Source rows the copy did not see.
+
+    A copy against a live source is not a snapshot: the cursor streams, and rows
+    committed after it passes the end of the table are simply not there. Counts
+    cannot detect this — the count taken before the copy matches the target
+    afterwards while the tail is quietly absent, which is exactly what happened
+    at the real cutover and cost eleven expenses. Comparing id sets does detect
+    it, so that is what runs here.
+    """
+    key = key_of(name)
+    with pg.cursor() as cur:
+        cur.execute(f'select "{key}" from "{name}"')
+        have = {r[0] for r in cur.fetchall()}
+    cur = ms.cursor()
+    cur.execute(f"select {key} from dbo.[{name}]")
+    return [r[0] for r in cur.fetchall() if r[0] not in have]
+
+
+def copy_specific(ms, pg, name, keys):
+    """Copy a named set of rows — the tail a streaming read missed."""
+    spec = TABLES[name]
+    key = key_of(name)
+    cols = ", ".join(spec["columns"])
+    cur = ms.cursor()
+    written = 0
+    with pg.cursor() as pcur:
+        with pcur.copy(f'copy "{name}" ({cols}) from stdin') as cp:
+            # SQL Server caps a statement at 2100 parameters, so the id list is
+            # chunked well inside that.
+            for i in range(0, len(keys), 1000):
+                chunk = keys[i:i + 1000]
+                placeholders = ", ".join(["%s"] * len(chunk))
+                cur.execute(f"{spec['select']} where {key} in ({placeholders})",
+                            tuple(chunk))
+                for row in cur.fetchall():
+                    cp.write_row(row)
+                    written += 1
+    return written
 
 
 def source_counts(ms):
@@ -149,15 +205,43 @@ def main():
         print("\n  target truncated; copying")
         for name in ORDER:
             copy_table(ms, pg, name)
+
+        # Second pass, before the transaction closes: anything committed to the
+        # source while the copy was streaming. Parents first again, so a late
+        # expense can still find its budget.
+        for name in ORDER:
+            late = late_arrivals(ms, pg, name)
+            if late:
+                copied = copy_specific(ms, pg, name, late)
+                print(f"    {name}: {copied:,} late arrival(s) picked up")
+
         reset_sequences(pg)
 
+    ms.close()
+    pg.close()
+
+    # Verify on new connections. Reading back through the connection that did the
+    # writing proves nothing about what was committed: an uncommitted change
+    # passes its own audit and then vanishes on close.
+    ms = pymssql.connect(server=args.mssql_host, user=args.mssql_user,
+                         password=pw, database=args.mssql_db, timeout=600)
+    pg = psycopg.connect(f"host={args.pg_host} dbname={args.pg_db} "
+                         f"user={args.pg_user} password={pw}")
+
     got = target_counts(pg)
-    print("\n  verification")
+    print("\n  verification (fresh connections, by id)")
     ok = True
     for t in ORDER:
-        match = src[t] == got[t]
-        ok &= match
-        print(f"    {t:<12} source {src[t]:>9,}  target {got[t]:>9,}  {'ok' if match else 'MISMATCH'}")
+        outstanding = late_arrivals(ms, pg, t)
+        ok &= not outstanding
+        print(f"    {t:<12} source {src[t]:>9,}  target {got[t]:>9,}  "
+              f"absent {len(outstanding):>3}  {'ok' if not outstanding else 'INCOMPLETE'}")
+        for k in outstanding[:5]:
+            print(f"      missing: {k}")
+
+    if not ok:
+        print("\n  Rows are still missing. The source is being written to; either\n"
+              "  stop writes and re-run, or reconcile the ids listed above.")
     ms.close()
     pg.close()
     sys.exit(0 if ok else 1)
