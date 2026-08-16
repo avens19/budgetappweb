@@ -33,6 +33,49 @@
             }
         };
 
+        // Colour by the category's rank in id order, not by hashing the id.
+        // This is the same rule the Android app uses, so the same category comes
+        // out the same colour on both — and with ten colours and typically fewer
+        // categories, no budget draws two slices alike. Hashing collided often
+        // enough at these sizes to be worse than useless in a pie chart.
+        window.categoryIndex = function (categories) {
+            var names = {}, colors = {}, ids = [];
+
+            for (var i = 0; i < categories.length; i++) {
+                names[categories[i].Id] = categories[i].Name;
+                ids.push(categories[i].Id);
+            }
+            ids.sort(function (a, b) { return a - b; });
+            for (var rank = 0; rank < ids.length; rank++) {
+                colors[ids[rank]] = 'var(--chart-' + ((rank % 10) + 1) + ')';
+            }
+
+            return {
+                list: categories,
+                // Whether an id still resolves. An expense keeps its CategoryId
+                // after the category is deleted, and those have no name left to
+                // show — so callers fold them in with the untagged rather than
+                // rendering a second bucket that also says "Uncategorized".
+                isKnown: function (id) { return id != null && names[id] !== undefined; },
+                // Uncategorised reads as "not a category", so it gets the
+                // neutral outline colour rather than a slot in the palette.
+                colorFor: function (id) {
+                    return (id != null && colors[id]) ? colors[id] : 'var(--outline)';
+                },
+                // A deleted category that still has expenses against it has no
+                // name left to show, so it falls in with the uncategorised.
+                nameFor: function (id) {
+                    return (id != null && names[id]) ? names[id] : 'Uncategorized';
+                }
+            };
+        };
+
+        window.loadCategories = function (budgetId, done) {
+            $.getJSON('/api/Budget/' + budgetId + '/Categories?watermark=', function (rows) {
+                done((rows || []).filter(function (c) { return !c.IsDeleted; }));
+            }).fail(function () { done([]); });
+        };
+
         (function () {
             var bar = document.getElementById('appbar');
             if (!bar) { return; }

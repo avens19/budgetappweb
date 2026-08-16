@@ -36,6 +36,24 @@ web.get('/Budget/:id/Month', asyncRoute(async (req, res) => {
   res.render('month', { title: 'Month', budget });
 }));
 
+web.get('/Budget/:id/Categories', asyncRoute(async (req, res) => {
+  const budget = await findBudget(req.params.id);
+  if (!budget) return res.sendStatus(404);
+  res.render('categories', { title: 'Categories', budget });
+}));
+
+// Reachable with or without a budget: the landing page links here before one
+// exists, and the app bar has to know where "Done" goes back to.
+web.get('/HowItWorks', (req, res) => {
+  res.render('howItWorks', { title: 'How this works', budget: null });
+});
+
+web.get('/Budget/:id/HowItWorks', asyncRoute(async (req, res) => {
+  const budget = await findBudget(req.params.id);
+  if (!budget) return res.sendStatus(404);
+  res.render('howItWorks', { title: 'How this works', budget });
+}));
+
 web.get('/Budget/:id/Add', asyncRoute(async (req, res) => {
   const budget = await findBudget(req.params.id);
   if (!budget) return res.sendStatus(404);

@@ -1,0 +1,417 @@
+<%- include('partials/head') %>
+            <div class="appbar__titles">
+                <h1 class="appbar__title"><a href="/Budget/<%= budget.UniqueId %>"><%= budget.Name || "Weekly Budget" %></a></h1>
+            </div>
+            <div class="appbar__actions">
+                <button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentPeriod()">Today</button>
+                <button class="btn btn--text" data-bind="click: toggleManage,
+                        text: managing() ? 'Done' : 'Manage'"></button>
+            </div>
+<%- include('partials/afterbar') %>
+<div class="segment" role="tablist" aria-label="Period">
+    <button class="segment__item" role="tab" data-bind="click: showWeek,
+            css: { 'is-active': mode() === 'week' }, attr: { 'aria-selected': mode() === 'week' }">Week</button>
+    <button class="segment__item" role="tab" data-bind="click: showMonth,
+            css: { 'is-active': mode() === 'month' }, attr: { 'aria-selected': mode() === 'month' }">Month</button>
+</div>
+
+<div class="period">
+    <button class="btn btn--icon" data-bind="click: periodBack" aria-label="Previous period">&#8249;</button>
+    <button type="button" class="period__label" data-bind="text: periodLabel, click: pickDate"
+            title="Jump to a period"></button>
+    <input class="period__input" type="date" id="periodPicker" tabindex="-1" aria-hidden="true"
+           data-bind="event: { change: onDatePicked }" />
+    <button class="btn btn--icon" data-bind="click: periodAhead" aria-label="Next period">&#8250;</button>
+</div>
+
+<div data-bind="visible: !managing() && slices().length > 0">
+    <section class="card">
+        <%#
+            A donut drawn with one stroked circle per slice: dasharray sets the
+            arc length, dashoffset walks it around the ring. No charting library
+            is involved, which matters — a strict CSP blocks anything off-host,
+            so a CDN script would simply never load.
+        %>
+        <svg class="donut" viewBox="0 0 100 100" role="img"
+             data-bind="attr: { 'aria-label': chartLabel }">
+            <circle cx="50" cy="50" r="42" fill="none" stroke="var(--track)" stroke-width="16"></circle>
+            <!-- ko foreach: slices -->
+            <circle class="donut__slice" cx="50" cy="50" r="42" fill="none" stroke-width="16"
+                    data-bind="attr: {
+                        stroke: color,
+                        'stroke-dasharray': dash,
+                        'stroke-dashoffset': offset
+                    }, css: { 'is-dimmed': $root.isDimmed(id) }, click: function () { $root.select(id); }"></circle>
+            <!-- /ko -->
+            <text class="donut__center donut__total" x="50" y="49"
+                  data-bind="text: money(total())"></text>
+            <text class="donut__center donut__caption" x="50" y="58"
+                  data-bind="text: mode() === 'week' ? 'this week' : 'this month'"></text>
+        </svg>
+        <p class="field__hint text-center">Tap a category to see its expenses</p>
+    </section>
+
+    <div class="legend" data-bind="foreach: slices">
+        <button class="legend__item" data-bind="click: function () { $root.select(id); },
+                css: { 'is-selected': $root.selectedId() === id }">
+            <span class="legend__swatch" data-bind="style: { background: color }"></span>
+            <span class="legend__name" data-bind="text: name"></span>
+            <span class="legend__share" data-bind="text: share"></span>
+            <span class="legend__amount" data-bind="text: money(amount)"></span>
+        </button>
+    </div>
+</div>
+
+<%# Selected category: its expenses for the period, so a surprising slice can
+   be traced back to the things that made it. %>
+<div data-bind="visible: !managing() && selectedId() !== undefined">
+    <div class="section-head">
+        <span data-bind="text: selectedName"></span>
+        <span class="money" data-bind="text: money(selectedTotal())"></span>
+    </div>
+    <!-- ko foreach: selectedExpenses -->
+    <a class="row" data-bind="attr: { href: '/Budget/' + $root.budgetId + '/Edit/' + Id }">
+        <span class="row__main">
+            <span class="row__title" data-bind="text: Description"></span>
+            <span class="row__sub" data-bind="text: $root.dateLabel(Date)"></span>
+        </span>
+        <span class="row__amount" data-bind="text: money(Amount)"></span>
+    </a>
+    <!-- /ko -->
+</div>
+
+<div class="empty" data-bind="visible: !managing() && slices().length === 0">
+    <p class="empty__title">Nothing to chart yet</p>
+    <p class="empty__body">Once you tag expenses with a category, the breakdown appears here.</p>
+</div>
+
+<%# Manage mode. Renaming and deleting are rare and destructive enough to keep
+   behind a deliberate switch rather than putting a delete button next to every
+   slice. Deleting a category leaves its expenses alone; they fall back to
+   Uncategorized, which is what the API's soft delete already does. %>
+<div data-bind="visible: managing">
+    <div class="legend" data-bind="foreach: categories">
+        <div class="row row--block">
+            <div class="row__head">
+                <span data-bind="text: Name"></span>
+                <span>
+                    <button class="btn btn--text" data-bind="click: function () { $root.rename($data); }">Rename</button>
+                    <button class="btn btn--text" data-bind="click: function () { $root.remove($data); }">Delete</button>
+                </span>
+            </div>
+        </div>
+    </div>
+    <div class="empty" data-bind="visible: categories().length === 0">
+        <p class="empty__title">No categories yet</p>
+        <p class="empty__body">Create a category while adding an expense and it will appear here.</p>
+    </div>
+</div>
+<%- include('partials/bottomnav', { budget: budget, active: 'categories' }) %>
+<%- include('partials/scripts') %>
+<script type="text/javascript">
+        var CIRCUMFERENCE = 2 * Math.PI * 42;
+
+        function CategoriesViewModel() {
+            var self = this;
+
+            this.budgetId = "<%= budget.UniqueId %>";
+            var startDay = <%= budget.StartDay %>;
+
+            this.mode = ko.observable('week');
+            this.managing = ko.observable(false);
+            this.categories = ko.observableArray();
+            this.expenses = ko.observableArray();
+            this.selectedId = ko.observable(undefined);
+
+            // Observable, not a plain variable: the slices are a computed that
+            // resolves ids to names through this, and the two requests race. A
+            // bare variable gave no dependency to track, so whenever the
+            // expenses landed first every slice stayed labelled "Uncategorized".
+            var index = ko.observable(categoryIndex([]));
+            function refreshCategories(done) {
+                loadCategories(self.budgetId, function (rows) {
+                    index(categoryIndex(rows));
+                    rows.sort(function (a, b) { return a.Name.localeCompare(b.Name); });
+                    self.categories(rows);
+                    if (done) { done(); }
+                });
+            }
+            refreshCategories();
+
+            /* ------------------------------------------------------ period */
+
+            var anchor = new Date();
+            while (anchor.getDay() != startDay) { anchor = anchor.addDays(-1); }
+            this.weekStart = ko.observable(anchor);
+
+            var firstOfMonth = new Date();
+            firstOfMonth.setDate(1);
+            this.monthStart = ko.observable(firstOfMonth);
+
+            var MONTHS = ["January", "February", "March", "April", "May", "June",
+                          "July", "August", "September", "October", "November", "December"];
+
+            this.periodLabel = ko.computed(function () {
+                if (self.mode() === 'week') {
+                    return shortDate(self.weekStart()) + ' – ' + shortDate(self.weekStart().addDays(6));
+                }
+                var d = self.monthStart();
+                return d.getFullYear() === new Date().getFullYear()
+                    ? MONTHS[d.getMonth()]
+                    : MONTHS[d.getMonth()] + ' ' + d.getFullYear();
+            });
+
+            this.isCurrentPeriod = ko.computed(function () {
+                var now = new Date();
+                if (self.mode() === 'week') {
+                    var start = new Date(self.weekStart()); start.setHours(0, 0, 0, 0);
+                    var end = start.addDays(6);
+                    now.setHours(0, 0, 0, 0);
+                    return now >= start && now <= end;
+                }
+                return self.monthStart().getMonth() === now.getMonth()
+                    && self.monthStart().getFullYear() === now.getFullYear();
+            });
+
+            /* -------------------------------------------------------- data */
+
+            // The month is the set of budget-aligned weeks that begin in it,
+            // then filtered to the month itself — the same span the Month tab
+            // adds up, so the two pages never disagree about a total.
+            function loadData() {
+                self.selectedId(undefined);
+
+                if (self.mode() === 'week') {
+                    $.getJSON('/api/Budget/' + self.budgetId + '/Week/' + self.weekStart().getTime(),
+                        function (rows) { self.expenses(rows || []); });
+                    return;
+                }
+
+                var current = self.monthStart();
+                var month = current.getMonth();
+                while (current.getDay() != startDay) { current = current.addDays(-1); }
+
+                var requests = [], results = [], first = true;
+                while (first || current.getMonth() == month) {
+                    (function (weekStart, i) {
+                        requests.push($.getJSON(
+                            '/api/Budget/' + self.budgetId + '/Week/' + weekStart.getTime(),
+                            function (rows) { results[i] = rows || []; }));
+                    })(current, requests.length);
+                    current = current.addDays(7);
+                    first = false;
+                }
+
+                $.when.apply($, requests).done(function () {
+                    var all = [];
+                    for (var i = 0; i < results.length; i++) {
+                        var rows = results[i] || [];
+                        for (var j = 0; j < rows.length; j++) {
+                            if (new Date(rows[j].Date).getUTCMonth() === month) { all.push(rows[j]); }
+                        }
+                    }
+                    self.expenses(all);
+                });
+            }
+
+            loadData();
+
+            /* ------------------------------------------------------ slices */
+
+            // Mirrors the phone's query exactly: system rows excluded, grouped
+            // by category, only positive totals kept, biggest first. Carried
+            // balances are negative and generated rather than spent, so
+            // charting them would make the ring add up to less than the month.
+            this.slices = ko.computed(function () {
+                var byId = {}, order = [];
+
+                var list = self.expenses();
+                for (var i = 0; i < list.length; i++) {
+                    var e = list[i];
+                    if (e.IsSystem) { continue; }
+                    // An id left behind by a deleted category resolves to no
+                    // name, so it belongs in the untagged bucket. Keyed on the
+                    // raw id it would draw a second slice also labelled
+                    // "Uncategorized", which just looks like a bug.
+                    var known = index().isKnown(e.CategoryId);
+                    var key = known ? String(e.CategoryId) : 'none';
+                    if (!byId[key]) {
+                        byId[key] = { id: known ? e.CategoryId : null, amount: 0 };
+                        order.push(key);
+                    }
+                    byId[key].amount += e.Amount;
+                }
+
+                var groups = [];
+                for (var k = 0; k < order.length; k++) {
+                    var g = byId[order[k]];
+                    if (g.amount > 0) { groups.push(g); }
+                }
+                groups.sort(function (a, b) { return b.amount - a.amount; });
+
+                var sum = 0;
+                for (var s = 0; s < groups.length; s++) { sum += groups[s].amount; }
+
+                var offset = 0, slices = [];
+                for (var n = 0; n < groups.length; n++) {
+                    var fraction = sum > 0 ? groups[n].amount / sum : 0;
+                    var length = fraction * CIRCUMFERENCE;
+                    slices.push({
+                        id: groups[n].id,
+                        name: index().nameFor(groups[n].id),
+                        color: index().colorFor(groups[n].id),
+                        amount: groups[n].amount,
+                        share: Math.round(fraction * 100) + '%',
+                        dash: length + ' ' + (CIRCUMFERENCE - length),
+                        offset: -offset
+                    });
+                    offset += length;
+                }
+                return slices;
+            });
+
+            this.total = ko.computed(function () {
+                var total = 0, list = self.slices();
+                for (var i = 0; i < list.length; i++) { total += list[i].amount; }
+                return total;
+            });
+
+            this.chartLabel = ko.computed(function () {
+                var parts = self.slices().map(function (s) { return s.name + ' ' + s.share; });
+                return parts.length ? 'Spending by category: ' + parts.join(', ') : 'No spending to chart';
+            });
+
+            /* --------------------------------------------------- selection */
+
+            this.select = function (id) {
+                self.selectedId(self.selectedId() === id ? undefined : id);
+            };
+
+            this.isDimmed = function (id) {
+                return self.selectedId() !== undefined && self.selectedId() !== id;
+            };
+
+            this.selectedName = ko.computed(function () {
+                return self.selectedId() === undefined ? '' : index().nameFor(self.selectedId());
+            });
+
+            this.selectedExpenses = ko.computed(function () {
+                if (self.selectedId() === undefined) { return []; }
+                var wanted = self.selectedId();
+                return self.expenses().filter(function (e) {
+                    if (e.IsSystem) { return false; }
+                    // Matches the bucketing above, so picking Uncategorized
+                    // lists the orphaned ones alongside the never-tagged.
+                    var id = index().isKnown(e.CategoryId) ? e.CategoryId : null;
+                    return id === wanted;
+                });
+            });
+
+            this.selectedTotal = ko.computed(function () {
+                var total = 0, list = self.selectedExpenses();
+                for (var i = 0; i < list.length; i++) { total += list[i].Amount; }
+                return total;
+            });
+
+            this.dateLabel = function (iso) {
+                var d = new Date(iso);
+                return d.toLocaleDateString(undefined,
+                    { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' });
+            };
+
+            /* ------------------------------------------------ manage mode */
+
+            this.toggleManage = function () {
+                self.managing(!self.managing());
+                self.selectedId(undefined);
+            };
+
+            this.rename = function (category) {
+                var name = prompt('Rename category', category.Name);
+                if (name === null) { return; }
+                name = name.trim();
+                if (!name) { return; }
+
+                $.ajax('/api/Categories/' + category.Id, {
+                    data: ko.toJSON({ id: category.Id, name: name, isDeleted: false }),
+                    type: 'put',
+                    contentType: 'application/json',
+                    success: function () { refreshCategories(function () { self.expenses.valueHasMutated(); }); },
+                    error: function () { alert('Could not rename that category. Please try again.'); }
+                });
+            };
+
+            this.remove = function (category) {
+                if (!confirm('Delete "' + category.Name + '"?\n\nIts expenses stay, but lose their category.')) {
+                    return;
+                }
+                $.ajax('/api/Categories/' + category.Id, {
+                    type: 'delete',
+                    success: function () { refreshCategories(function () { self.expenses.valueHasMutated(); }); },
+                    error: function () { alert('Could not delete that category. Please try again.'); }
+                });
+            };
+
+            /* ----------------------------------------------- period moves */
+
+            this.showWeek = function () { self.mode('week'); loadData(); };
+            this.showMonth = function () { self.mode('month'); loadData(); };
+
+            this.periodBack = function () { shift(-1); };
+            this.periodAhead = function () { shift(1); };
+
+            function shift(direction) {
+                if (self.mode() === 'week') {
+                    self.weekStart(self.weekStart().addDays(7 * direction));
+                } else {
+                    var d = new Date(self.monthStart());
+                    d.setMonth(d.getMonth() + direction);
+                    d.setDate(1);
+                    self.monthStart(d);
+                }
+                loadData();
+            }
+
+            this.goToday = function () {
+                if (self.mode() === 'week') {
+                    var start = new Date();
+                    while (start.getDay() != startDay) { start = start.addDays(-1); }
+                    self.weekStart(start);
+                } else {
+                    var first = new Date();
+                    first.setDate(1);
+                    self.monthStart(first);
+                }
+                loadData();
+            };
+
+            this.pickDate = function () {
+                var input = document.getElementById('periodPicker');
+                input.value = toDateInput(self.mode() === 'week' ? self.weekStart() : self.monthStart());
+                if (typeof input.showPicker === 'function') {
+                    try { input.showPicker(); return; } catch (e) { /* fall through */ }
+                }
+                input.focus();
+                input.click();
+            };
+
+            this.onDatePicked = function () {
+                var input = document.getElementById('periodPicker');
+                if (!input.value) { return; }
+                var parts = input.value.split('-');
+                var chosen = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+
+                if (self.mode() === 'week') {
+                    while (chosen.getDay() != startDay) { chosen = chosen.addDays(-1); }
+                    self.weekStart(chosen);
+                } else {
+                    chosen.setDate(1);
+                    self.monthStart(chosen);
+                }
+                loadData();
+            };
+        }
+
+        ko.applyBindings(new CategoriesViewModel());
+    </script>
+<%- include('partials/foot') %>

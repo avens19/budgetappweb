@@ -34,6 +34,19 @@
 
     --track: rgba(0, 0, 0, .16);
 
+    /* The Android app's chart palette, value for value, so a category is the
+       same colour whichever device it is looked at on. */
+    --chart-1: #2e7d5b;
+    --chart-2: #3f6f9e;
+    --chart-3: #b5843a;
+    --chart-4: #8a5aa8;
+    --chart-5: #c25e5e;
+    --chart-6: #3f8f8a;
+    --chart-7: #96793c;
+    --chart-8: #6f7fb8;
+    --chart-9: #a85b7e;
+    --chart-10: #5c8a4a;
+
     --radius-s: 14px;
     --radius-m: 20px;
     --radius-l: 28px;
@@ -69,6 +82,17 @@
 
         --track: rgba(255, 255, 255, .16);
 
+        --chart-1: #6cc79b;
+        --chart-2: #7fb2e0;
+        --chart-3: #e0b872;
+        --chart-4: #c7a2e0;
+        --chart-5: #ef9a9a;
+        --chart-6: #76ccc6;
+        --chart-7: #d6bb72;
+        --chart-8: #a8b4e8;
+        --chart-9: #db9ab8;
+        --chart-10: #9dc784;
+
         --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 4px 16px rgba(0, 0, 0, .3);
     }
 }
@@ -88,6 +112,12 @@
 *, *::before, *::after { box-sizing: border-box; }
 
 html { -webkit-text-size-adjust: 100%; }
+
+/* Content links only. Everything built out of an anchor — rows, nav items, the
+   app-bar title, anything wearing .btn — sets its own colour with a class, and
+   a class beats this. Without it those links fell back to the browser's blue,
+   which is unreadable on the dark surface. */
+a { color: var(--primary); }
 
 body {
     margin: 0;
@@ -540,7 +570,127 @@ select.field__input {
 
 .bottomnav__item--accent .bottomnav__icon { background: var(--primary); color: var(--on-primary); }
 
+/* ---------- Segmented toggle ---------- */
+
+.segment {
+    display: flex;
+    padding: 3px;
+    margin: 4px 0 12px;
+    background: var(--surface-container);
+    border-radius: 999px;
+}
+
+.segment__item {
+    flex: 1;
+    padding: 9px 12px;
+    border: 0;
+    background: transparent;
+    color: var(--on-surface-variant);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.segment__item:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+.segment__item.is-active {
+    background: var(--surface-lowest);
+    color: var(--on-surface);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+}
+
+/* ---------- Category chart ---------- */
+
+.donut {
+    display: block;
+    width: 100%;
+    max-width: 260px;
+    margin: 8px auto 4px;
+    /* Start the first slice at twelve o'clock, the way the app draws it. */
+    transform: rotate(-90deg);
+}
+
+.donut__slice {
+    cursor: pointer;
+    transition: opacity .15s ease;
+}
+
+.donut__slice:hover { opacity: .82; }
+.donut__slice.is-dimmed { opacity: .28; }
+
+.donut__center {
+    transform: rotate(90deg);
+    transform-origin: center;
+    text-anchor: middle;
+    fill: var(--on-surface);
+}
+
+/* These are SVG user units, which the 0 0 100 100 viewBox scales by about 2.6
+   at the donut's rendered width — so 10 here lands near 26px on screen. */
+.donut__total { font-size: 10px; font-weight: 600; letter-spacing: -.02em; }
+.donut__caption { font-size: 4.5px; fill: var(--on-surface-variant); }
+
+.legend { margin-top: 8px; }
+
+.legend__item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 14px;
+    border: 1px solid transparent;
+    background: transparent;
+    border-radius: var(--radius-s);
+    color: inherit;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.legend__item:hover { background: var(--surface-container); }
+.legend__item:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+.legend__item.is-selected {
+    background: var(--surface-lowest);
+    border-color: var(--outline-variant);
+}
+
+.legend__swatch {
+    flex: none;
+    width: 14px; height: 14px;
+    border-radius: 4px;
+}
+
+.legend__name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.legend__share { flex: none; font-size: 13px; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+.legend__amount { flex: none; font-variant-numeric: tabular-nums; font-weight: 500; min-width: 72px; text-align: right; }
+
+/* ---------- Prose, for How this works ---------- */
+
+.prose { max-width: 34em; }
+.prose h2 { margin: 10px 0 8px; font-size: 20px; font-weight: 600; letter-spacing: -.01em; }
+.prose p { margin: 0 0 12px; font-size: 16px; line-height: 1.6; color: var(--on-surface-variant); }
+
+/* The icon carries the spacing between sections, so the heading sits close
+   under its own icon rather than floating midway between two. */
+.prose__icon {
+    display: flex; align-items: center; justify-content: center;
+    width: 44px; height: 44px;
+    margin: 32px 0 0;
+    border-radius: 14px;
+    background: var(--primary-container); color: var(--on-primary-container);
+}
+.prose > .prose__icon:first-child { margin-top: 8px; }
+.prose__icon svg { width: 24px; height: 24px; fill: currentColor; }
+
 /* ---------- Utilities ---------- */
+
+.btn--danger { background: var(--error-container); color: var(--on-error-container); }
+.btn--danger:hover { filter: brightness(.97); }
+
+.row__dot--lg { width: 12px; height: 12px; }
 
 .stack > * + * { margin-top: 12px; }
 .muted { color: var(--on-surface-variant); }
