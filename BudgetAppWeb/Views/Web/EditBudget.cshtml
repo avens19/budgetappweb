@@ -6,6 +6,10 @@
 @section title{
     <a href="/Budget/@Model.UniqueId">Edit budget</a>
 }
+@section subtitle{
+    <span class="appbar__sub">@(string.IsNullOrEmpty(Model.Name) ? "Weekly Budget" : Model.Name)</span>
+}
+
 
 @section nav{
     <a class="btn btn--text" href="/Budget/@Model.UniqueId">Cancel</a>

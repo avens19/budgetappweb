@@ -105,6 +105,11 @@ namespace BudgetAppWeb.Controllers
                 return null;
             }
 
+            // The view's model is the expense, which carries no budget name,
+            // and every page shows the name so it is always clear which budget
+            // is being edited.
+            ViewBag.BudgetName = budget.Name;
+
             StreamHub.NewEvent(string.Format("Budget {0} was viewed on the edit expense page", id));
 
             return View(expense);

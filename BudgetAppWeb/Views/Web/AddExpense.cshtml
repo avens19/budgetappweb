@@ -7,6 +7,10 @@
 @section title{
     <a href="/Budget/@Model.UniqueId">Add expense</a>
 }
+@section subtitle{
+    <span class="appbar__sub">@(string.IsNullOrEmpty(Model.Name) ? "Weekly Budget" : Model.Name)</span>
+}
+
 
 @section nav{
     <a class="btn btn--text" href="/Budget/@Model.UniqueId">Cancel</a>
@@ -18,7 +22,7 @@
 *@
 <section class="card amount-card">
     <label class="field__label" for="amount">Amount</label>
-    <input class="field__input" id="amount" type="number" inputmode="decimal" step="0.01"
+    <input class="field__input" id="amount" type="number" autofocus inputmode="decimal" step="0.01"
            placeholder="0" data-bind="value: amount, valueUpdate: 'input'" />
 </section>
 

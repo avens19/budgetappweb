@@ -15,7 +15,13 @@
 <body>
     <header class="appbar" id="appbar">
         <div class="appbar__inner">
-            <h1 class="appbar__title">@RenderSection("title")</h1>
+            @* On the three tab screens the bottom bar already says where you
+               are, so the title is the budget's name. Detail screens need the
+               title for themselves and put the name underneath. *@
+            <div class="appbar__titles">
+                <h1 class="appbar__title">@RenderSection("title")</h1>
+                @RenderSection("subtitle", false)
+            </div>
             <div class="appbar__actions">@RenderSection("nav", false)</div>
         </div>
     </header>

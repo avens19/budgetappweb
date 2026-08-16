@@ -5,16 +5,22 @@
 }
 
 @section title{
-    <a href="/Budget/@Model.UniqueId">Month</a>
+    <a href="/Budget/@Model.UniqueId">@(string.IsNullOrEmpty(Model.Name) ? "Weekly Budget" : Model.Name)</a>
 }
 
 @section nav{
+    <button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentMonth()">Today</button>
     <a class="btn btn--icon" href="/Budget/@Model.UniqueId/Edit" title="Edit budget" aria-label="Edit budget"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zM15 9h2V7h4V5h-4V3h-2v6z"/></svg></a>
 }
 
 <div class="period">
     <button class="btn btn--icon" data-bind="click: monthBack" aria-label="Previous month">&#8249;</button>
-    <div class="period__label" data-bind="text: months[month()]"></div>
+    <button type="button" class="period__label" data-bind="text: monthLabel, click: pickDate"
+            title="Jump to a month"></button>
+    @* A date rather than a month input: Safari still renders type="month" as a
+       plain text box, and the iPhone browser is exactly who this page is for. *@
+    <input class="period__input" type="date" id="monthPicker" tabindex="-1" aria-hidden="true"
+           data-bind="event: { change: onDatePicked }" />
     <button class="btn btn--icon" data-bind="click: monthAhead" aria-label="Next month">&#8250;</button>
 </div>
 
@@ -31,7 +37,7 @@
     was unreadable at phone widths and the useful comparison is each week's
     total against the weekly budget, which the bar shows directly.
 *@
-<div class="mt-l" data-bind="foreach: weeks">
+<div class="mt-l" data-bind="visible: anySpending, foreach: weeks">
     <div class="row row--block" data-bind="css: { 'row--static': true }">
         <div class="row__head">
             <span data-bind="text: rangeLabel"></span>
@@ -45,7 +51,7 @@
     </div>
 </div>
 
-<div class="empty" data-bind="visible: total() === 0">
+<div class="empty" data-bind="visible: !anySpending()">
     <p class="empty__title">No expenses this month</p>
     <p class="empty__body">Add expenses on the Week tab and they will roll up here.</p>
 </div>
@@ -142,6 +148,26 @@
             this.months = ["January", "February", "March", "April", "May", "June",
                            "July", "August", "September", "October", "November", "December"];
 
+            this.monthLabel = ko.computed(function () {
+                var d = self.monthStart();
+                var label = self.months[d.getMonth()];
+                return d.getFullYear() === new Date().getFullYear()
+                    ? label : label + " " + d.getFullYear();
+            });
+
+            this.isCurrentMonth = ko.computed(function () {
+                var now = new Date();
+                return self.monthStart().getMonth() === now.getMonth()
+                    && self.monthStart().getFullYear() === now.getFullYear();
+            });
+
+            // A month with nothing in it still produces a row per week, so the
+            // rows and the empty state must not both be visible.
+            this.anySpending = ko.computed(function () {
+                if (self.total() !== 0) { return true; }
+                return self.weeks().some(function (w) { return w.total() !== 0; });
+            });
+
             var startDay = @Model.StartDay;
             this.startDay = ko.observable(startDay);
 
@@ -185,6 +211,34 @@
             }
 
             loadData();
+
+            function showMonth(start) {
+                start.setDate(1);
+                self.monthStart(start);
+                loadData();
+            }
+
+            this.pickDate = function () {
+                var input = document.getElementById('monthPicker');
+                input.value = toDateInput(self.monthStart());
+                if (typeof input.showPicker === 'function') {
+                    try { input.showPicker(); return; } catch (e) { /* fall through */ }
+                }
+                input.focus();
+                input.click();
+            };
+
+            this.onDatePicked = function () {
+                var input = document.getElementById('monthPicker');
+                if (!input.value) { return; }
+                var parts = input.value.split('-');
+                showMonth(new Date(+parts[0], +parts[1] - 1, 1));
+            };
+
+            this.goToday = function () {
+                var now = new Date();
+                showMonth(new Date(now.getFullYear(), now.getMonth(), 1));
+            };
 
             function shiftMonth(delta) {
                 var start = new Date(self.monthStart().getTime());

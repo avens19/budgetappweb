@@ -9,15 +9,21 @@
 }
 
 @section nav{
+    <button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentWeek()">Today</button>
     <a class="btn btn--icon" href="/Budget/@Model.UniqueId/Edit" title="Edit budget" aria-label="Edit budget"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zM15 9h2V7h4V5h-4V3h-2v6z"/></svg></a>
 }
 
+@* Stepping a week at a time is fine for last week and useless for last
+   March, so the heading opens a date picker and jumps to whichever week
+   contains the date chosen. *@
 <div class="period">
     <button class="btn btn--icon" data-bind="click: weekBack" aria-label="Previous week">&#8249;</button>
-    <div class="period__label">
+    <button type="button" class="period__label" data-bind="click: pickDate" title="Jump to a week">
         <span data-bind="text: periodLabel"></span>
         <span class="period__sub" data-bind="text: periodSub, visible: periodSub"></span>
-    </div>
+    </button>
+    <input class="period__input" type="date" id="weekPicker" tabindex="-1" aria-hidden="true"
+           data-bind="value: pickerValue, event: { change: onDatePicked }" />
     <button class="btn btn--icon" data-bind="click: weekAhead" aria-label="Next week">&#8250;</button>
 </div>
 
@@ -28,7 +34,7 @@
         <div class="progress__fill" data-bind="style: { width: spentPercent() + '%' }"></div>
     </div>
     <div class="hero__foot">
-        <span data-bind="text: money(total()) + ' spent of ' + money(limit())"></span>
+        <span data-bind="text: money(total()) + ' of ' + money(limit())"></span>
     </div>
 </section>
 
@@ -116,6 +122,15 @@
             this.weekStart = ko.observable(weekStart);
             this.weekEnd = ko.observable(weekStart.addDays(6));
 
+            this.isCurrentWeek = ko.computed(function () {
+                var now = new Date(); now.setHours(0, 0, 0, 0);
+                var start = new Date(self.weekStart()); start.setHours(0, 0, 0, 0);
+                var end = new Date(self.weekEnd()); end.setHours(0, 0, 0, 0);
+                return now >= start && now <= end;
+            });
+
+            this.pickerValue = ko.observable(toDateInput(weekStart));
+
             this.periodLabel = ko.computed(function () {
                 return shortDate(self.weekStart()) + ' – ' + shortDate(self.weekEnd());
             });
@@ -164,6 +179,37 @@
             }
 
             loadData();
+
+            // showPicker opens the native calendar straight away where it is
+            // supported; focusing the input is the fallback everywhere else.
+            this.pickDate = function () {
+                var input = document.getElementById('weekPicker');
+                self.pickerValue(toDateInput(self.weekStart()));
+                if (typeof input.showPicker === 'function') {
+                    try { input.showPicker(); return; } catch (e) { /* fall through */ }
+                }
+                input.focus();
+                input.click();
+            };
+
+            this.onDatePicked = function () {
+                var input = document.getElementById('weekPicker');
+                if (!input.value) { return; }
+                var parts = input.value.split('-');
+                var chosen = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+                while (chosen.getDay() != startDay) { chosen = chosen.addDays(-1); }
+                self.weekStart(chosen);
+                self.weekEnd(chosen.addDays(6));
+                loadData();
+            };
+
+            this.goToday = function () {
+                var start = new Date();
+                while (start.getDay() != startDay) { start = start.addDays(-1); }
+                self.weekStart(start);
+                self.weekEnd(start.addDays(6));
+                loadData();
+            };
 
             this.weekBack = function () {
                 self.weekStart(self.weekStart().addDays(-7));
