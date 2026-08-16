@@ -1,0 +1,125 @@
+/**
+ * Wire formats.
+ *
+ * Every shape here is pinned by ../../CONTRACT.md, which was captured from the
+ * running ASP.NET server rather than inferred. Android releases going back
+ * years read these payloads and cannot be updated in step, so this file is the
+ * one place where "what looks tidy" loses to "what the old server emitted".
+ */
+
+const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
+              'Thursday', 'Friday', 'Saturday'];
+
+/** Postgres hands back `2026-08-14`; the wire carries UTC midnight. */
+export function dateOnly(value) {
+  if (value == null) return null;
+  return `${value}T00:00:00Z`;
+}
+
+/**
+ * `2026-08-16 14:18:22.49+00` -> `2026-08-16T14:18:22.49Z`.
+ *
+ * Json.NET trimmed trailing zeros from the fraction and dropped the point
+ * entirely when there was none, so `.490` was emitted as `.49`. Nothing reads
+ * these, but matching keeps a diff against the old server clean.
+ */
+export function timestamp(value) {
+  if (value == null) return null;
+  const [datePart, rest] = String(value).split(' ');
+  if (!rest) return String(value);
+
+  const clock = rest.replace(/([+-]\d{2}(:\d{2})?|Z)$/, '');
+  let [hms, fraction = ''] = clock.split('.');
+  fraction = fraction.replace(/0+$/, '');
+  return `${datePart}T${hms}${fraction ? '.' + fraction : ''}Z`;
+}
+
+/**
+ * The X-Watermark header: always seven fractional digits.
+ *
+ * The client stores one watermark for two feeds and picks the earlier by
+ * comparing them as strings, which is only sound while every value is the same
+ * width. Postgres gives microseconds, so the last digit is padded.
+ */
+export function watermark(value) {
+  const [datePart, rest] = String(value).split(' ');
+  const clock = rest.replace(/([+-]\d{2}(:\d{2})?|Z)$/, '');
+  const [hms, fraction = ''] = clock.split('.');
+  return `${datePart}T${hms}.${fraction.padEnd(7, '0').slice(0, 7)}Z`;
+}
+
+export function budget(row) {
+  if (!row) return null;
+  return {
+    UniqueId: row.UniqueId,
+    Name: row.Name,
+    StartDay: row.StartDay,
+    Amount: row.Amount,
+    DateCreated: timestamp(row.DateCreated),
+    DateUpdated: timestamp(row.DateUpdated),
+    // Computed on the C# model and present in every payload. The web app's
+    // budget form binds its weekday dropdown to this string, not to StartDay.
+    StartDayOfWeek: DAYS[row.StartDay] ?? 'Sunday',
+  };
+}
+
+export function expense(row) {
+  if (!row) return null;
+  return {
+    // The old server serialised EF's navigation properties, embedding a whole
+    // Budget object inside every expense in the change feeds. No client reads
+    // it, so it stays null here and a week's payload gets much smaller.
+    Budget: null,
+    Category: null,
+    Id: row.Id,
+    Date: dateOnly(row.Date),
+    Description: row.Description,
+    Amount: row.Amount,
+    BudgetId: row.BudgetId,
+    CategoryId: row.CategoryId,
+    DateCreated: timestamp(row.DateCreated),
+    DateUpdated: timestamp(row.DateUpdated),
+    IsDeleted: row.IsDeleted,
+    IsSystem: row.IsSystem,
+  };
+}
+
+export function category(row) {
+  if (!row) return null;
+  return {
+    Budget: null,
+    Id: row.Id,
+    Name: row.Name,
+    BudgetId: row.BudgetId,
+    DateCreated: timestamp(row.DateCreated),
+    DateUpdated: timestamp(row.DateUpdated),
+    IsDeleted: row.IsDeleted,
+  };
+}
+
+/**
+ * Accepts a body whatever case the caller used.
+ *
+ * The Android client sends PascalCase and the web app's Knockout view models
+ * send camelCase to the same endpoints — `ko.toJSON({ budgetId: ... })`
+ * against `POST /api/Expense`. ASP.NET bound both; this keeps that working.
+ */
+export function field(body, name) {
+  if (body == null) return undefined;
+  if (name in body) return body[name];
+  const lower = name.toLowerCase();
+  for (const key of Object.keys(body)) {
+    if (key.toLowerCase() === lower) return body[key];
+  }
+  return undefined;
+}
+
+export function startDayFrom(body) {
+  const named = field(body, 'StartDayOfWeek');
+  if (typeof named === 'string') {
+    const index = DAYS.findIndex((d) => d.toLowerCase() === named.toLowerCase());
+    if (index >= 0) return index;
+  }
+  const numeric = field(body, 'StartDay');
+  return Number.isFinite(Number(numeric)) ? Number(numeric) : 0;
+}

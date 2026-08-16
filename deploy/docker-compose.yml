@@ -8,6 +8,25 @@
 #   docker compose logs -f db
 
 services:
+  app:
+    build: ../server
+    container_name: budget-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB:-budgetapp}
+      PGUSER: ${POSTGRES_USER:-budgetapp}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      TZ: UTC
+      PORT: 3000
+    # Published on the host for a reverse proxy to terminate TLS in front of.
+    # Nothing here speaks HTTPS; do not expose 8080 to the internet directly.
+    ports:
+      - "8080:3000"
+
   db:
     image: postgres:17-alpine
     container_name: budget-db

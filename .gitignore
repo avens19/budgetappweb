@@ -158,3 +158,4 @@ $RECYCLE.BIN/
 
 # Local compose secrets
 deploy/.env
+server/node_modules/
