@@ -4,13 +4,13 @@ import pg from 'pg';
 // re-formatted for the wire. The contract needs exact control over the string,
 // so DATE and TIMESTAMPTZ come back as text and are formatted deliberately.
 // 1082 = date, 1114 = timestamp, 1184 = timestamptz.
-pg.types.setTypeParser(1082, (v) => v);
-pg.types.setTypeParser(1114, (v) => v);
-pg.types.setTypeParser(1184, (v) => v);
+pg.types.setTypeParser(1082, (v: string) => v);
+pg.types.setTypeParser(1114, (v: string) => v);
+pg.types.setTypeParser(1184, (v: string) => v);
 
 // int8 arrives as a string so large values survive; every bigint here is an
 // id that comfortably fits a JS number, and the clients expect JSON numbers.
-pg.types.setTypeParser(20, (v) => Number(v));
+pg.types.setTypeParser(20, (v: string) => Number(v));
 
 export const pool = new pg.Pool({
   host: process.env.PGHOST ?? 'localhost',
@@ -23,13 +23,15 @@ export const pool = new pg.Pool({
   connectionTimeoutMillis: 10_000,
 });
 
-pool.on('error', (err) => {
+pool.on('error', (err: Error) => {
   // An idle client erroring must not take the process down.
   console.error('[db] idle client error', err.message);
 });
 
-export function query(text, params) {
-  return pool.query(text, params);
+export type Row = Record<string, unknown>;
+
+export function query<T extends Row = Row>(text: string, params?: readonly unknown[]) {
+  return pool.query<T>(text, params as unknown[]);
 }
 
 /**
@@ -39,7 +41,7 @@ export function query(text, params) {
  * transaction start, so the upper bound used to filter rows and the watermark
  * handed back to the client are guaranteed to be the same instant.
  */
-export async function transaction(fn) {
+export async function transaction<T>(fn: (client: pg.PoolClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');

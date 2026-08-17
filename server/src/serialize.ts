@@ -8,10 +8,32 @@
  */
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
-              'Thursday', 'Friday', 'Saturday'];
+              'Thursday', 'Friday', 'Saturday'] as const;
+
+/** A row as it comes out of Postgres, before it is shaped for the wire. */
+export interface BudgetRow {
+  UniqueId: string; Name: string; StartDay: number; Amount: number;
+  DateCreated: string | null; DateUpdated: string | null;
+}
+
+export interface ExpenseRow {
+  Id: number; Date: string | null; Description: string; Amount: number;
+  BudgetId: string; CategoryId: number | null;
+  DateCreated: string | null; DateUpdated: string | null;
+  IsDeleted: boolean; IsSystem: boolean;
+}
+
+export interface CategoryRow {
+  Id: number; Name: string; BudgetId: string;
+  DateCreated: string | null; DateUpdated: string | null;
+  IsDeleted: boolean; OriginalId?: number | null;
+}
+
+/** Anything the clients might send: PascalCase, camelCase, or absent. */
+export type Body = Record<string, unknown>;
 
 /** Postgres hands back `2026-08-14`; the wire carries UTC midnight. */
-export function dateOnly(value) {
+export function dateOnly(value: string | null): string | null {
   if (value == null) return null;
   return `${value}T00:00:00Z`;
 }
@@ -23,13 +45,14 @@ export function dateOnly(value) {
  * entirely when there was none, so `.490` was emitted as `.49`. Nothing reads
  * these, but matching keeps a diff against the old server clean.
  */
-export function timestamp(value) {
+export function timestamp(value: string | null): string | null {
   if (value == null) return null;
   const [datePart, rest] = String(value).split(' ');
-  if (!rest) return String(value);
+  if (!rest || datePart === undefined) return String(value);
 
-  const clock = rest.replace(/([+-]\d{2}(:\d{2})?|Z)$/, '');
-  let [hms, fraction = ''] = clock.split('.');
+  const clock: string = (rest ?? '').replace(/([+-]\d{2}(:\d{2})?|Z)$/, '');
+  let [hms, fraction = ''] = clock.split('.') as [string, string?];
+  fraction = fraction ?? '';
   fraction = fraction.replace(/0+$/, '');
   return `${datePart}T${hms}${fraction ? '.' + fraction : ''}Z`;
 }
@@ -41,14 +64,14 @@ export function timestamp(value) {
  * comparing them as strings, which is only sound while every value is the same
  * width. Postgres gives microseconds, so the last digit is padded.
  */
-export function watermark(value) {
-  const [datePart, rest] = String(value).split(' ');
-  const clock = rest.replace(/([+-]\d{2}(:\d{2})?|Z)$/, '');
+export function watermark(value: string): string {
+  const [datePart = '', rest = ''] = String(value).split(' ');
+  const clock: string = (rest ?? '').replace(/([+-]\d{2}(:\d{2})?|Z)$/, '');
   const [hms, fraction = ''] = clock.split('.');
-  return `${datePart}T${hms}.${fraction.padEnd(7, '0').slice(0, 7)}Z`;
+  return `${datePart}T${hms}.${(fraction ?? '').padEnd(7, '0').slice(0, 7)}Z`;
 }
 
-export function budget(row) {
+export function budget(row: BudgetRow | undefined): unknown {
   if (!row) return null;
   return {
     UniqueId: row.UniqueId,
@@ -63,7 +86,7 @@ export function budget(row) {
   };
 }
 
-export function expense(row) {
+export function expense(row: ExpenseRow | undefined): unknown {
   if (!row) return null;
   return {
     // The old server serialised EF's navigation properties, embedding a whole
@@ -84,7 +107,7 @@ export function expense(row) {
   };
 }
 
-export function category(row) {
+export function category(row: CategoryRow | undefined): unknown {
   if (!row) return null;
   return {
     Budget: null,
@@ -104,7 +127,7 @@ export function category(row) {
  * send camelCase to the same endpoints — `ko.toJSON({ budgetId: ... })`
  * against `POST /api/Expense`. ASP.NET bound both; this keeps that working.
  */
-export function field(body, name) {
+export function field(body: Body | null | undefined, name: string): unknown {
   if (body == null) return undefined;
   if (name in body) return body[name];
   const lower = name.toLowerCase();
@@ -114,7 +137,7 @@ export function field(body, name) {
   return undefined;
 }
 
-export function startDayFrom(body) {
+export function startDayFrom(body: Body): number {
   const named = field(body, 'StartDayOfWeek');
   if (typeof named === 'string') {
     const index = DAYS.findIndex((d) => d.toLowerCase() === named.toLowerCase());
