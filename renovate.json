@@ -1,38 +1,62 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", ":dependencyDashboard"],
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard"
+  ],
   "timezone": "America/Edmonton",
-  "schedule": ["before 6am on the first day of the month"],
   "prConcurrentLimit": 3,
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "packageRules": [
     {
       "description": "Types and the compiler cannot reach production, so a passing typecheck is enough to take them automatically.",
-      "matchPackageNames": ["typescript"],
-      "matchPackagePatterns": ["^@types/"],
+      "matchPackageNames": [
+        "typescript"
+      ],
+      "matchPackagePatterns": [
+        "^@types/"
+      ],
       "groupName": "typescript",
       "automerge": true,
       "automergeType": "branch"
     },
     {
       "description": "Base images carry the security fixes that matter most here, and node/postgres patch releases are safe by design.",
-      "matchDatasources": ["docker"],
-      "matchUpdateTypes": ["patch"],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchUpdateTypes": [
+        "patch"
+      ],
       "groupName": "docker base images",
       "automerge": true,
       "automergeType": "branch"
     },
     {
       "description": "Postgres majors need a dump and restore, never an image swap.",
-      "matchDatasources": ["docker"],
-      "matchPackageNames": ["postgres"],
-      "matchUpdateTypes": ["major", "minor"],
+      "matchDatasources": [
+        "docker"
+      ],
+      "matchPackageNames": [
+        "postgres"
+      ],
+      "matchUpdateTypes": [
+        "major",
+        "minor"
+      ],
       "dependencyDashboardApproval": true
     },
     {
       "description": "Express and pg are the whole server; read the notes.",
-      "matchPackageNames": ["express", "pg"],
-      "matchUpdateTypes": ["major"],
+      "matchPackageNames": [
+        "express",
+        "pg"
+      ],
+      "matchUpdateTypes": [
+        "major"
+      ],
       "dependencyDashboardApproval": true
     }
   ]

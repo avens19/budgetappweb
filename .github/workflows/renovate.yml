@@ -1,0 +1,46 @@
+# Renovate, self-hosted on Actions rather than the GitHub App.
+#
+# One runner for all three repositories: it is one secret to manage instead of
+# three, and the cadence lives in one place. Each repository still holds its own
+# renovate.json, so what gets grouped, held or automerged is decided next to the
+# code it applies to.
+#
+# The schedule was removed from those configs deliberately. Renovate's own
+# `schedule` and a cron are two independent gates — with both set it only acts
+# when a run happens to fall inside the window, which looks like Renovate being
+# broken.
+#
+# Needs a RENOVATE_TOKEN secret: a PAT with repo scope (classic), or fine-grained
+# with Contents and Pull requests write on the three repositories. The default
+# GITHUB_TOKEN will not do — it cannot open PRs that trigger other workflows, and
+# it has no access to the other two repositories.
+name: Renovate
+
+on:
+  schedule:
+    - cron: '0 9 1 * *'      # 09:00 UTC on the 1st of each month
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: Log level
+        default: info
+        type: choice
+        options: [info, debug]
+      dryRun:
+        description: Dry run — report what it would do, change nothing
+        default: false
+        type: boolean
+
+jobs:
+  renovate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: renovatebot/github-action@v41
+        with:
+          token: ${{ secrets.RENOVATE_TOKEN }}
+          configurationFile: .github/renovate-global.json
+        env:
+          LOG_LEVEL: ${{ inputs.logLevel || 'info' }}
+          RENOVATE_DRY_RUN: ${{ inputs.dryRun && 'full' || '' }}
