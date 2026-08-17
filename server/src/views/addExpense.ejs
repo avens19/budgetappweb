@@ -85,13 +85,9 @@
                 var name = (self.newCategoryName() || '').trim();
                 if (!name) { fail('Name the new category, or pick No category.'); return; }
 
-                $.ajax('/api/Categories', {
-                    data: ko.toJSON({ name: name, budgetId: budgetId }),
-                    type: 'post',
-                    contentType: 'application/json',
-                    success: function (created) { done(created.Id); },
-                    error: function () { fail('Could not create that category. Please try again.'); }
-                });
+                api.send('POST', '/api/Categories', { name: name, budgetId: budgetId })
+                    .then(function (created) { done(created.Id); })
+                    .catch(function () { fail('Could not create that category. Please try again.'); });
             }
 
             this.addExpense = function () {
@@ -103,22 +99,18 @@
 
                 self.saving(true);
                 resolveCategory(function (categoryId) {
-                    $.ajax("/api/Expense", {
-                        data: ko.toJSON({
-                            date: self.date(),
-                            description: self.description(),
-                            amount: parseFloat(self.amount()),
-                            budgetId: budgetId,
-                            categoryId: categoryId
-                        }),
-                        type: "post",
-                        contentType: "application/json",
-                        success: function () { window.location.href = '/Budget/' + budgetId; },
-                        error: function () {
+                    api.send("POST", "/api/Expense", {
+                        date: self.date(),
+                        description: self.description(),
+                        amount: parseFloat(self.amount()),
+                        budgetId: budgetId,
+                        categoryId: categoryId
+                    })
+                        .then(function () { window.location.href = '/Budget/' + budgetId; })
+                        .catch(function () {
                             self.saving(false);
                             alert('Could not save that expense. Please try again.');
-                        }
-                    });
+                        });
                 }, function (message) {
                     self.saving(false);
                     alert(message);

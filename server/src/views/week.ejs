@@ -163,9 +163,10 @@
             });
 
             function loadData() {
-                $.getJSON("/api/Budget/<%= budget.UniqueId %>/Week/" + self.weekStart().getTime(), function (allData) {
-                    self.expenses($.map(allData, function (item) { return new Expense(item); }));
-                });
+                api.get("/api/Budget/<%= budget.UniqueId %>/Week/" + self.weekStart().getTime())
+                    .then(function (allData) {
+                        self.expenses(allData.map(function (item) { return new Expense(item); }));
+                    });
             }
 
             loadData();
@@ -226,19 +227,15 @@
                 if (!confirm('Move the remaining ' + money(rounded) + ' into next week?')) { return; }
 
                 var next = self.weekStart().addDays(7);
-                $.ajax('/api/Expense', {
-                    data: ko.toJSON({
-                        date: toDateInput(next),
-                        description: 'Carried Balance',
-                        amount: -rounded,
-                        budgetId: self.budgetId,
-                        isSystem: true
-                    }),
-                    type: 'post',
-                    contentType: 'application/json',
-                    success: function () { loadData(); },
-                    error: function () { alert('Could not carry that balance. Please try again.'); }
-                });
+                api.send('POST', '/api/Expense', {
+                    date: toDateInput(next),
+                    description: 'Carried Balance',
+                    amount: -rounded,
+                    budgetId: self.budgetId,
+                    isSystem: true
+                })
+                    .then(function () { loadData(); })
+                    .catch(function () { alert('Could not carry that balance. Please try again.'); });
             };
         }
 

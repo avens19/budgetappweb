@@ -182,8 +182,8 @@
                 self.selectedId(undefined);
 
                 if (self.mode() === 'week') {
-                    $.getJSON('/api/Budget/' + self.budgetId + '/Week/' + self.weekStart().getTime(),
-                        function (rows) { self.expenses(rows || []); });
+                    api.get('/api/Budget/' + self.budgetId + '/Week/' + self.weekStart().getTime())
+                        .then(function (rows) { self.expenses(rows || []); });
                     return;
                 }
 
@@ -194,15 +194,15 @@
                 var requests = [], results = [], first = true;
                 while (first || current.getMonth() == month) {
                     (function (weekStart, i) {
-                        requests.push($.getJSON(
-                            '/api/Budget/' + self.budgetId + '/Week/' + weekStart.getTime(),
-                            function (rows) { results[i] = rows || []; }));
+                        requests.push(
+                            api.get('/api/Budget/' + self.budgetId + '/Week/' + weekStart.getTime())
+                                .then(function (rows) { results[i] = rows || []; }));
                     })(current, requests.length);
                     current = current.addDays(7);
                     first = false;
                 }
 
-                $.when.apply($, requests).done(function () {
+                Promise.all(requests).then(function () {
                     var all = [];
                     for (var i = 0; i < results.length; i++) {
                         var rows = results[i] || [];
@@ -332,24 +332,19 @@
                 name = name.trim();
                 if (!name) { return; }
 
-                $.ajax('/api/Categories/' + category.Id, {
-                    data: ko.toJSON({ id: category.Id, name: name, isDeleted: false }),
-                    type: 'put',
-                    contentType: 'application/json',
-                    success: function () { refreshCategories(function () { self.expenses.valueHasMutated(); }); },
-                    error: function () { alert('Could not rename that category. Please try again.'); }
-                });
+                api.send('PUT', '/api/Categories/' + category.Id,
+                         { id: category.Id, name: name, isDeleted: false })
+                    .then(function () { refreshCategories(function () { self.expenses.valueHasMutated(); }); })
+                    .catch(function () { alert('Could not rename that category. Please try again.'); });
             };
 
             this.remove = function (category) {
                 if (!confirm('Delete "' + category.Name + '"?\n\nIts expenses stay, but lose their category.')) {
                     return;
                 }
-                $.ajax('/api/Categories/' + category.Id, {
-                    type: 'delete',
-                    success: function () { refreshCategories(function () { self.expenses.valueHasMutated(); }); },
-                    error: function () { alert('Could not delete that category. Please try again.'); }
-                });
+                api.send('DELETE', '/api/Categories/' + category.Id)
+                    .then(function () { refreshCategories(function () { self.expenses.valueHasMutated(); }); })
+                    .catch(function () { alert('Could not delete that category. Please try again.'); });
             };
 
             /* ----------------------------------------------- period moves */

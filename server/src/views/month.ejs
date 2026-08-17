@@ -166,10 +166,10 @@
                 while (first || current.getMonth() == self.month()) {
                     (function (weekStart, index) {
                         requests.push(
-                            $.getJSON("/api/Budget/<%= budget.UniqueId %>/Week/" + weekStart.getTime(),
-                                function (allData) {
+                            api.get("/api/Budget/<%= budget.UniqueId %>/Week/" + weekStart.getTime())
+                                .then(function (allData) {
                                     results[index] = new Week(weekStart,
-                                        $.map(allData, function (item) { return new Expense(item); }));
+                                        allData.map(function (item) { return new Expense(item); }));
                                 })
                         );
                     })(current, requests.length);
@@ -178,7 +178,7 @@
                     first = false;
                 }
 
-                $.when.apply($, requests).done(function () {
+                Promise.all(requests).then(function () {
                     self.weeks(results);
                 });
             }

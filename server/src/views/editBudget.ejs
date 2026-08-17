@@ -60,21 +60,17 @@
                 }
 
                 self.saving(true);
-                $.ajax("/api/Budget/" + uniqueId, {
-                    data: ko.toJSON({
-                        name: self.name() || 'My',
-                        startDayOfWeek: self.startDay(),
-                        amount: parseFloat(self.amount()),
-                        uniqueId: uniqueId
-                    }),
-                    type: "put",
-                    contentType: "application/json",
-                    success: function () { window.location.href = '/Budget/' + uniqueId; },
-                    error: function () {
+                api.send("PUT", "/api/Budget/" + uniqueId, {
+                    name: self.name() || 'My',
+                    startDayOfWeek: self.startDay(),
+                    amount: parseFloat(self.amount()),
+                    uniqueId: uniqueId
+                })
+                    .then(function () { window.location.href = '/Budget/' + uniqueId; })
+                    .catch(function () {
                         self.saving(false);
                         alert('Could not save that budget. Please try again.');
-                    }
-                });
+                    });
             };
         }
 
