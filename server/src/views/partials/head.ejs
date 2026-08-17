@@ -12,7 +12,14 @@
     <meta name="apple-mobile-web-app-title" content="Weekly Budget">
     <title><%= title %> - Weekly Budget</title>
     <link href="/app.css" rel="stylesheet" type="text/css" />
-    <link rel="SHORTCUT ICON" href="/favicon.ico">
+    <%# The icon matters more here than on most sites: the app tells iPhone
+       users to add this page to the home screen, and without an
+       apple-touch-icon iOS uses a screenshot of the page instead. These are
+       generated from the same artwork as the Android launcher and the iOS app
+       icon, so all three look like one product. %>
+    <link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png">
+    <link rel="apple-touch-icon" href="/icon-180.png">
+    <link rel="manifest" href="/site.webmanifest">
 </head>
 <body>
     <header class="appbar" id="appbar">

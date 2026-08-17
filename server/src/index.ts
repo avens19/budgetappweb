@@ -30,6 +30,11 @@ app.use(express.json({ limit: '256kb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(here, 'public'), { maxAge: '1h' }));
 
+// Browsers ask for /favicon.ico whether or not a link tag says so, and it was
+// 404ing on every page load. Point it at the real icon rather than shipping a
+// second copy in an obsolete format.
+app.get('/favicon.ico', (_req: Request, res: Response) => res.redirect(301, '/icon-32.png'));
+
 app.get('/healthz', async (_req: Request, res: Response) => {
   try {
     await pool.query('select 1');
