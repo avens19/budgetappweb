@@ -145,6 +145,8 @@ api.post('/expense', asyncRoute(async (req, res) => {
   const budgetId = wire.field(e, 'BudgetId');
   if (!budgetId) return res.status(400).json({ Message: 'BudgetId is required' });
 
+  const categoryId = await storableCategoryId(wire.field(e, 'CategoryId'));
+
   const { rows } = await query(
     `insert into "Expenses"
        ("Date","Description","Amount","BudgetId","CategoryId",
@@ -153,19 +155,21 @@ api.post('/expense', asyncRoute(async (req, res) => {
      returning *`,
     [asDate(wire.field(e, 'Date')), wire.field(e, 'Description') ?? '',
      Number(wire.field(e, 'Amount') ?? 0), budgetId,
-     nullableId(wire.field(e, 'CategoryId')), Boolean(wire.field(e, 'IsSystem'))]);
+     categoryId, Boolean(wire.field(e, 'IsSystem'))]);
   res.status(201).json(wire.expense(rows[0]));
 }));
 
 api.put('/expense/:id', asyncRoute(async (req, res) => {
   const e = req.body ?? {};
+  const categoryId = await storableCategoryId(wire.field(e, 'CategoryId'));
+
   const { rowCount } = await query(
     `update "Expenses"
         set "Date" = $2, "Description" = $3, "Amount" = $4, "CategoryId" = $5,
             "IsSystem" = $6, "IsDeleted" = false, "DateUpdated" = now()
       where "Id" = $1`,
     [req.params.id, asDate(wire.field(e, 'Date')), wire.field(e, 'Description') ?? '',
-     Number(wire.field(e, 'Amount') ?? 0), nullableId(wire.field(e, 'CategoryId')),
+     Number(wire.field(e, 'Amount') ?? 0), categoryId,
      Boolean(wire.field(e, 'IsSystem'))]);
   if (!rowCount) return res.sendStatus(404);
   res.sendStatus(204);
@@ -188,10 +192,16 @@ api.post('/categories', asyncRoute(async (req, res) => {
   const budgetId = wire.field(c, 'BudgetId');
   if (!budgetId) return res.status(400).json({ Message: 'BudgetId is required' });
 
+  // Keep the client's own id when it made one up, so a stale reference on an
+  // expense arriving later in the same sync can still be resolved. Only ids in
+  // the client range are worth recording; a 0 or a real id means nothing here.
+  const claimed = nullableId(wire.field(c, 'Id'));
+  const originalId = claimed != null && claimed >= 1_000_000_000_000 ? claimed : null;
+
   const { rows } = await query(
-    `insert into "Categories" ("Name","BudgetId","DateCreated","DateUpdated","IsDeleted")
-     values ($1,$2, now(), now(), $3) returning *`,
-    [wire.field(c, 'Name') ?? '', budgetId, Boolean(wire.field(c, 'IsDeleted'))]);
+    `insert into "Categories" ("Name","BudgetId","DateCreated","DateUpdated","IsDeleted","OriginalId")
+     values ($1,$2, now(), now(), $3, $4) returning *`,
+    [wire.field(c, 'Name') ?? '', budgetId, Boolean(wire.field(c, 'IsDeleted')), originalId]);
   res.status(201).json(wire.category(rows[0]));
 }));
 
@@ -233,4 +243,34 @@ function nullableId(value) {
   if (value == null || value === '') return null;
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * A CategoryId this server can actually store, or null.
+ *
+ * The Android client hands out its own category ids while offline, from 10^12
+ * up, and swaps them for the server's on the next sync. `Sync.run` reads its
+ * pending expenses into memory *before* pushing the categories, so an expense
+ * created against a brand-new category is sent carrying the local id even
+ * though the row in SQLite has already been repointed. The server has never
+ * seen that id, the foreign key rejects it, and the whole sync aborts — taking
+ * every later change with it and retrying forever.
+ *
+ * The expense is what the user typed and is worth keeping; the category tag is
+ * a nicety, and every client already renders an unresolvable one as
+ * "Uncategorized". So an unknown id is stored as null rather than failing the
+ * write. See migration 002 for recovering the tag itself.
+ */
+async function storableCategoryId(value) {
+  const id = nullableId(value);
+  if (id == null) return null;
+  const { rows } = await query('select 1 from "Categories" where "Id" = $1', [id]);
+  if (rows.length) return id;
+
+  const { rows: mapped } = await query(
+    'select "Id" from "Categories" where "OriginalId" = $1 order by "Id" limit 1', [id]);
+  if (mapped.length) return mapped[0].Id;
+
+  console.warn(`[categoryId] ${id} is unknown; storing the expense uncategorised`);
+  return null;
 }
