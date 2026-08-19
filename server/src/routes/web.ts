@@ -66,6 +66,19 @@ web.get('/Budget/:id/HowItWorks', asyncRoute(async (req, res) => {
   res.render('howItWorks', { title: 'How this works', budget });
 }));
 
+// Where both phones send anyone asking about the other platform, so neither app
+// has to name it — see the comment at the top of apps.ejs. Paired with and
+// without a budget for the same reason as HowItWorks.
+web.get('/Apps', (req, res) => {
+  res.render('apps', { title: 'Apps', budget: null });
+});
+
+web.get('/Budget/:id/Apps', asyncRoute(async (req, res) => {
+  const budget = await findBudget(param(req, 'id'));
+  if (!budget) return res.sendStatus(404);
+  res.render('apps', { title: 'Apps', budget });
+}));
+
 web.get('/Budget/:id/Add', asyncRoute(async (req, res) => {
   const budget = await findBudget(param(req, 'id'));
   if (!budget) return res.sendStatus(404);

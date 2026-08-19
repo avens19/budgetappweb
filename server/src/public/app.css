@@ -674,6 +674,15 @@ select.field__input {
 .prose ul { margin: 0 0 12px; padding-left: 22px; }
 .prose li { font-size: 16px; line-height: 1.6; color: var(--on-surface-variant); margin-bottom: 6px; }
 .prose strong { color: var(--on-surface); }
+
+/*
+   The store links: two rows, so bullets are more furniture than help, and the
+   rows read better flush with the body text than indented under it. The type
+   selector is not decoration — `.prose ul` sets a padding-left and outspecifies
+   a bare `.app-links`, which left the reset silently doing nothing.
+*/
+ul.app-links { list-style: none; margin: 0 0 12px; padding-left: 0; }
+ul.app-links li { margin-bottom: 8px; }
 .prose p { margin: 0 0 12px; font-size: 16px; line-height: 1.6; color: var(--on-surface-variant); }
 
 /* The icon carries the spacing between sections, so the heading sits close
