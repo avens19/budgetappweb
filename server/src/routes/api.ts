@@ -1,10 +1,44 @@
+import { randomBytes } from 'node:crypto';
 import express from 'express';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { query, transaction } from '../db.js';
 import type { PoolClient } from 'pg';
 import * as wire from '../serialize.js';
+import { redeem } from '../invites.js';
 
 export const api = express.Router();
+
+/** A path parameter of a matched route is always present. */
+const param = (req: Request, name: string): string => String(req.params[name]);
+
+/**
+ * 16 random bytes, base64url, 22 characters.
+ *
+ * `randomBytes` and not `Math.random`: this is the credential standing in for
+ * access to someone's budget, and a predictable one would let a stranger walk
+ * in. 128 bits is far past guessable, and short enough to read out loud.
+ */
+function inviteToken(): string {
+  return randomBytes(16).toString('base64url');
+}
+
+/**
+ * The origin to build invite links against.
+ *
+ * Behind Caddy the request arrives as plain HTTP on a container port, so
+ * `req.protocol` and the listening port are both wrong for a public URL. The
+ * proxy's forwarded headers are the only truthful source, and the configured
+ * value wins over both so a link can never come out pointing at localhost.
+ */
+function publicOrigin(req: Request): string {
+  const configured = process.env.BUDGETAPP_PUBLIC_ORIGIN;
+  if (configured) return configured.replace(/\/+$/, '');
+  const proto = String(req.headers['x-forwarded-proto'] ?? req.protocol ?? 'https')
+    .split(',')[0]!.trim();
+  const host = String(req.headers['x-forwarded-host'] ?? req.headers.host ?? '')
+    .split(',')[0]!.trim();
+  return `${proto}://${host}`;
+}
 
 type AsyncHandler = (req: Request, res: Response, next: NextFunction) => Promise<unknown>;
 const asyncRoute = (fn: AsyncHandler): RequestHandler =>
@@ -227,6 +261,92 @@ api.delete('/categories/:id', asyncRoute(async (req, res) => {
       where "Id" = $1 returning *`, [req.params.id]);
   if (!rows.length) return res.sendStatus(404);
   res.json(wire.category(rows[0] as never));
+}));
+
+/* ------------------------------------------------------------------ invites */
+
+/*
+ * An invite is a short-lived, single-use stand-in for the budget id, so that
+ * sharing a budget does not mean publishing its only credential as a URL. The
+ * reasoning is in migrations/004_invites.sql.
+ *
+ * One rule governs the shape of all of this: redeeming is a POST and nothing
+ * else. Every messaging client fetches a shared URL to build a preview, so a GET
+ * that consumed the token would leave the invite dead before the person it was
+ * sent to had a chance to tap it. There is deliberately no GET that mutates, and
+ * no "peek" endpoint that quietly counts as a use.
+ */
+
+const INVITE_TTL_HOURS = Number(process.env.BUDGETAPP_INVITE_TTL_HOURS ?? 168);
+
+api.post('/budget/:id/invites', asyncRoute(async (req, res) => {
+  const budgetId = param(req, 'id');
+  const { rows: budgets } = await query(
+    'select 1 from "Budgets" where "UniqueId" = $1', [budgetId]);
+  if (!budgets.length) return res.sendStatus(404);
+
+  const maxUses = Math.min(Math.max(Number(wire.field(req.body ?? {}, 'MaxUses') ?? 1), 1), 20);
+
+  // Opportunistic tidying: this table would otherwise only ever grow, and the
+  // rows in question can never be redeemed again. Cheap, bounded, and it keeps
+  // a listing honest without a scheduled job to forget about.
+  await query(
+    `delete from "Invites"
+      where "BudgetId" = $1
+        and ("ExpiresAt" < now() or "Uses" >= "MaxUses" or "RevokedAt" is not null)`,
+    [budgetId]);
+
+  const token = inviteToken();
+  const { rows } = await query(
+    `insert into "Invites" ("Token","BudgetId","ExpiresAt","MaxUses")
+     values ($1, $2, now() + ($3 || ' hours')::interval, $4)
+     returning *`,
+    [token, budgetId, String(INVITE_TTL_HOURS), maxUses]);
+
+  res.status(201).json(wire.invite(rows[0] as never, publicOrigin(req)));
+}));
+
+api.get('/budget/:id/invites', asyncRoute(async (req, res) => {
+  const { rows } = await query(
+    `select * from "Invites"
+      where "BudgetId" = $1 and "RevokedAt" is null
+        and "ExpiresAt" > now() and "Uses" < "MaxUses"
+      order by "CreatedAt" desc`,
+    [param(req, 'id')]);
+  res.json(rows.map((row) => wire.invite(row as never, publicOrigin(req))));
+}));
+
+api.delete('/invites/:token', asyncRoute(async (req, res) => {
+  const { rowCount } = await query(
+    `update "Invites" set "RevokedAt" = now()
+      where "Token" = $1 and "RevokedAt" is null`, [param(req, 'token')]);
+  if (!rowCount) return res.sendStatus(404);
+  res.sendStatus(204);
+}));
+
+/**
+ * Exchanges a token for the budget it points at, and spends one use.
+ *
+ * A POST, and there is no GET equivalent: see invites.ts.
+ */
+api.post('/invites/:token/redeem', asyncRoute(async (req, res) => {
+  const result = await redeem(param(req, 'token'));
+
+  if ('failed' in result) {
+    return res.status(result.failed === 'unusable' ? 410 : 404).json({
+      Message: result.failed === 'unusable'
+        ? 'This invite has already been used or has expired.'
+        : 'That invite does not exist.',
+    });
+  }
+
+  const { rows } = await query(
+    'select * from "Budgets" where "UniqueId" = $1', [result.budgetId]);
+  if (!rows.length) return res.sendStatus(404);
+
+  // The budget itself, not just its id, so a client can store it and show the
+  // right name and weekly amount without a second call.
+  res.json(wire.budget(rows[0] as never));
 }));
 
 /* ------------------------------------------------------------------ helpers */

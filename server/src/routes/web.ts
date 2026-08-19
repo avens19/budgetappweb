@@ -2,6 +2,7 @@ import express from 'express';
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import { query } from '../db.js';
 import * as wire from '../serialize.js';
+import { inspect, redeem } from '../invites.js';
 
 /** A path parameter of a matched route is always present. */
 const param = (req: Request, name: string): string => String(req.params[name]);
@@ -78,6 +79,123 @@ web.get('/Budget/:id/Apps', asyncRoute(async (req, res) => {
   if (!budget) return res.sendStatus(404);
   res.render('apps', { title: 'Apps', budget });
 }));
+
+/* --------------------------------------------------------------- deep links */
+
+/*
+ * The two association files, and the pages an invite link lands on.
+ *
+ * Routes rather than static files: express.static skips dotfile directories, and
+ * the content type is load-bearing — Apple ignores an association served as
+ * anything other than JSON, and neither file may be reached through a redirect.
+ */
+
+const APPLE_APP_ID =
+  process.env.BUDGETAPP_APPLE_APP_ID ?? 'YZGA278893.com.andrewovens.weeklybudget2';
+const ANDROID_PACKAGE =
+  process.env.BUDGETAPP_ANDROID_PACKAGE ?? 'com.andrewovens.weeklybudget2';
+
+/*
+ * The certificate Android checks is the one the installed app was signed with,
+ * which is not necessarily the one in our keystore: with Play App Signing, Play
+ * re-signs the upload and its own certificate is what ships. The value below is
+ * the upload key's, and it is right only if this app signs with that key
+ * directly — Play Console, App integrity, "App signing key certificate", is the
+ * authority. Several fingerprints are allowed, so adding Play's is additive and
+ * never breaks the one already here.
+ */
+const ANDROID_SHA256 = (process.env.BUDGETAPP_ANDROID_SHA256
+  ?? '65:37:CA:37:D9:98:34:44:64:CC:DB:E1:5A:A2:ED:9C:E0:4E:2D:CE:7E:11:99:D6:84:02:77:F8:54:D1:8A:09')
+  .split(/[,\s]+/)
+  .filter(Boolean);
+
+web.get('/.well-known/apple-app-site-association', (_req, res) => {
+  res.type('application/json')
+     .set('Cache-Control', 'public, max-age=3600')
+     .json({
+       applinks: {
+         details: [{
+           appIDs: [APPLE_APP_ID],
+           // Only the invite path. Claiming the whole domain would mean every
+           // link to the site tried to open the app, including the ones whose
+           // entire job is to be a web page.
+           components: [{ '/': '/join/*', comment: 'invite links' }],
+         }],
+       },
+     });
+});
+
+web.get('/.well-known/assetlinks.json', (_req, res) => {
+  res.type('application/json')
+     .set('Cache-Control', 'public, max-age=3600')
+     .json([{
+       relation: ['delegate_permission/common.handle_all_urls'],
+       target: {
+         namespace: 'android_app',
+         package_name: ANDROID_PACKAGE,
+         sha256_cert_fingerprints: ANDROID_SHA256,
+       },
+     }]);
+});
+
+/**
+ * The page an invite link lands on. Safe, and it has to stay that way.
+ *
+ * Redeeming happens in the POST below and nowhere else. Every messaging client
+ * fetches a shared URL to build a preview, so a GET that spent the token would
+ * kill the invite before its recipient ever tapped it — which is the single most
+ * likely way this feature could fail in practice.
+ *
+ * It also does not reveal the budget id. That id is the durable credential, and
+ * a GET response containing it would hand it to every preview bot and proxy the
+ * link passes through, which is the whole thing invites exist to avoid.
+ */
+web.get('/join/:token', asyncRoute(async (req, res) => {
+  const state = await inspect(param(req, 'token'));
+  joinHeaders(res);
+  res.render('join', {
+    title: 'Join a budget',
+    budget: null,
+    state: state.status,
+    budgetName: state.budgetName ?? '',
+    token: param(req, 'token'),
+  });
+}));
+
+web.post('/join/:token', asyncRoute(async (req, res) => {
+  const result = await redeem(param(req, 'token'));
+  joinHeaders(res);
+
+  if ('failed' in result) {
+    return res.status(result.failed === 'missing' ? 404 : 410).render('join', {
+      title: 'Join a budget',
+      budget: null,
+      state: result.failed,
+      budgetName: '',
+      token: param(req, 'token'),
+    });
+  }
+
+  // 303 so the browser follows with a GET: a refresh of the result page must not
+  // re-submit the form against a token that has already been spent.
+  //
+  // `new=1` is the same flag a freshly created budget gets, which prompts to add
+  // the page to the home screen. That advice matters more here than there — the
+  // URL is now this person's only handle on the budget.
+  res.redirect(303, `/Budget/${result.budgetId}?new=1`);
+}));
+
+/**
+ * No caching, and no Referer.
+ *
+ * The token is in the path, so any request this page triggers to a third party
+ * would carry it in the Referer header, and a shared cache holding the page
+ * would serve one person's invite to the next.
+ */
+function joinHeaders(res: Response): void {
+  res.set('Cache-Control', 'no-store, private');
+  res.set('Referrer-Policy', 'no-referrer');
+}
 
 web.get('/Budget/:id/Add', asyncRoute(async (req, res) => {
   const budget = await findBudget(param(req, 'id'));

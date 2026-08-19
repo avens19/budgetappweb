@@ -222,3 +222,110 @@ test('deleting a budget with children succeeds', async () => {
   assert.equal(res.status, 200);
   assert.equal((await call('GET', `/api/budget/${id}`)).res.status, 404);
 });
+
+/* ----------------------------------------------------------------- invites */
+
+/**
+ * These are not contract tests in the same sense as the rest of this file —
+ * invites did not exist on the old server, so nothing in the field depends on
+ * their shape. They are here because the first one guards the property most
+ * likely to be broken by a well-meaning change, and breaking it would be close
+ * to invisible: every invite would simply stop working for the person it was
+ * sent to, while working perfectly whenever a developer tested it by hand.
+ */
+
+async function withInvite(fn, body = {}) {
+  await withBudget(async (id) => {
+    const created = await call('POST', `/api/budget/${id}/invites`, body);
+    assert.equal(created.res.status, 201);
+    await fn(created.json.Token, id, created.json);
+  });
+}
+
+test('invite: fetching the join page does not spend it', async () => {
+  await withInvite(async (token, id) => {
+    // What a link does when it is pasted into a chat. Several clients fetch it,
+    // some issue a HEAD, and browsers may prefetch — none of that is the
+    // recipient tapping it.
+    for (const agent of ['facebookexternalhit/1.1', 'WhatsApp/2.23',
+                         'Slackbot-LinkExpanding 1.0', 'Twitterbot/1.0']) {
+      const res = await fetch(`${BASE}/join/${token}`, { headers: { 'User-Agent': agent } });
+      assert.equal(res.status, 200, `${agent} should get the page`);
+    }
+    assert.equal((await fetch(`${BASE}/join/${token}`, { method: 'HEAD' })).status, 200);
+
+    // Still redeemable afterwards, which is the entire point.
+    const redeemed = await call('POST', `/api/invites/${token}/redeem`);
+    assert.equal(redeemed.res.status, 200, 'previews must not have consumed the invite');
+    assert.equal(redeemed.json.UniqueId, id);
+  });
+});
+
+test('invite: the join page never reveals the budget id', async () => {
+  await withInvite(async (token, id) => {
+    const { text } = await call('GET', `/join/${token}`);
+    // The id is the durable credential. A GET response carrying it would hand it
+    // to every preview bot and proxy the link passed through, which is the thing
+    // invites exist to prevent.
+    assert.ok(!text.includes(id), 'the budget id must not appear before redemption');
+    assert.match(text, /noindex/, 'an invite page should not be indexed');
+  });
+});
+
+test('invite: one use, and a replay is refused', async () => {
+  await withInvite(async (token) => {
+    assert.equal((await call('POST', `/api/invites/${token}/redeem`)).res.status, 200);
+    assert.equal((await call('POST', `/api/invites/${token}/redeem`)).res.status, 410);
+  });
+});
+
+test('invite: concurrent redemptions produce exactly one winner', async () => {
+  await withInvite(async (token) => {
+    // The check and the increment are one statement precisely so this cannot
+    // hand the same single-use invite to two devices.
+    const results = await Promise.all(Array.from({ length: 8 }, () =>
+      call('POST', `/api/invites/${token}/redeem`).then((r) => r.res.status)));
+    assert.equal(results.filter((s) => s === 200).length, 1, JSON.stringify(results));
+  });
+});
+
+test('invite: revoking one makes it unusable', async () => {
+  await withInvite(async (token) => {
+    assert.equal((await call('DELETE', `/api/invites/${token}`)).res.status, 204);
+    assert.equal((await call('POST', `/api/invites/${token}/redeem`)).res.status, 410);
+  });
+});
+
+test('invite: an unknown token is a 404, not a 500', async () => {
+  const { res } = await call('POST', '/api/invites/nosuchtokenatall/redeem');
+  assert.equal(res.status, 404);
+});
+
+test('invite: MaxUses is honoured and capped', async () => {
+  await withInvite(async (token) => {
+    for (const expected of [200, 200, 200, 410]) {
+      assert.equal((await call('POST', `/api/invites/${token}/redeem`)).res.status, expected);
+    }
+  }, { MaxUses: 3 });
+});
+
+test('deep links: both association files are served as JSON', async () => {
+  const apple = await fetch(`${BASE}/.well-known/apple-app-site-association`);
+  assert.equal(apple.status, 200);
+  assert.match(apple.headers.get('content-type'), /application\/json/,
+               'Apple ignores an association served as anything else');
+  const applinks = await apple.json();
+  assert.match(applinks.applinks.details[0].appIDs[0], /^[A-Z0-9]{10}\./);
+  // Only the invite path: claiming the whole domain would send every link to
+  // the site into the app, including pages whose whole job is to be a page.
+  assert.deepEqual(applinks.applinks.details[0].components.map((c) => c['/']), ['/join/*']);
+
+  const android = await fetch(`${BASE}/.well-known/assetlinks.json`);
+  assert.equal(android.status, 200);
+  const links = await android.json();
+  assert.equal(links[0].target.namespace, 'android_app');
+  for (const fingerprint of links[0].target.sha256_cert_fingerprints) {
+    assert.match(fingerprint, /^([0-9A-F]{2}:){31}[0-9A-F]{2}$/,
+                 'a SHA-256 fingerprint is 32 colon-separated hex bytes');
+  }
+});

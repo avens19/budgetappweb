@@ -39,6 +39,31 @@
     </div>
 </section>
 
+<%#
+    The better way to hand a budget to someone: a link that expires and works
+    once, rather than the id itself, which never expires and cannot be taken
+    back. The ID above stays because older app versions in the field only know
+    how to join that way.
+%>
+<section class="card mt-l">
+    <div class="field__label">Invite someone</div>
+    <p class="field__hint" style="margin-left:0">
+        A one-time link, good for seven days. Better than sending the ID: it stops
+        working once it has been used, and you can cancel it.
+    </p>
+    <div class="form-actions">
+        <button class="btn btn--block btn--outlined" id="invite-create">Create an invite link</button>
+    </div>
+    <div id="invite-result" hidden>
+        <div class="id-card__value" id="invite-url" style="word-break:break-all"></div>
+        <div class="form-actions stack">
+            <button class="btn btn--block" id="invite-share">Share link</button>
+            <button class="btn btn--block btn--outlined" id="invite-copy">Copy link</button>
+            <button class="btn btn--block btn--danger" id="invite-revoke">Cancel this invite</button>
+        </div>
+    </div>
+</section>
+
 <div class="form-actions">
     <button class="btn btn--block" data-bind="click: save, disable: saving">Save budget</button>
 </div>
@@ -78,5 +103,78 @@
         }
 
         ko.applyBindings(new EditBudgetViewModel());
+
+        // Plain DOM rather than a Knockout section: this is three buttons and one
+        // string, and it does not belong in the view model that saves the budget.
+        (function () {
+            var budgetId = "<%= budget.UniqueId %>";
+            var create = document.getElementById('invite-create');
+            var result = document.getElementById('invite-result');
+            var urlBox = document.getElementById('invite-url');
+            var shareBtn = document.getElementById('invite-share');
+            var copyBtn = document.getElementById('invite-copy');
+            var revokeBtn = document.getElementById('invite-revoke');
+            var token = null;
+
+            // navigator.share is the right control on a phone and does not exist
+            // on most desktops, so it is only offered where it works.
+            if (!navigator.share) { shareBtn.hidden = true; }
+
+            create.addEventListener('click', function () {
+                create.disabled = true;
+                api.send('POST', '/api/Budget/' + budgetId + '/invites', {})
+                    .then(function (invite) {
+                        token = invite.Token;
+                        urlBox.textContent = invite.Url;
+                        result.hidden = false;
+                        create.textContent = 'Create another link';
+                        create.disabled = false;
+                    })
+                    .catch(function () {
+                        create.disabled = false;
+                        alert('Could not create an invite link. Please try again.');
+                    });
+            });
+
+            shareBtn.addEventListener('click', function () {
+                navigator.share({
+                    title: 'Join my weekly budget',
+                    text: 'Tap to share my weekly budget:',
+                    url: urlBox.textContent
+                }).catch(function () { /* the user dismissed the sheet */ });
+            });
+
+            copyBtn.addEventListener('click', function () {
+                var done = function () {
+                    copyBtn.textContent = 'Copied';
+                    setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 2000);
+                };
+                // clipboard.writeText needs a secure context, which a plain-HTTP
+                // visit is not, so there has to be something to fall back to.
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(urlBox.textContent).then(done, select);
+                } else {
+                    select();
+                }
+                function select() {
+                    var range = document.createRange();
+                    range.selectNodeContents(urlBox);
+                    var selection = window.getSelection();
+                    selection.removeAllRanges();
+                    selection.addRange(range);
+                }
+            });
+
+            revokeBtn.addEventListener('click', function () {
+                if (!token) { return; }
+                api.send('DELETE', '/api/invites/' + token)
+                    .then(function () {
+                        result.hidden = true;
+                        token = null;
+                        create.textContent = 'Create an invite link';
+                    })
+                    .catch(function () { alert('Could not cancel that invite.'); });
+            });
+        })();
     </script>
 <%- include('partials/foot') %>

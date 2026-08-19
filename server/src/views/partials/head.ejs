@@ -20,6 +20,20 @@
     <link rel="icon" href="/icon-32.png" sizes="32x32" type="image/png">
     <link rel="apple-touch-icon" href="/icon-180.png">
     <link rel="manifest" href="/site.webmanifest">
+<% if (locals.noindex) { %>
+    <%# Read via locals, like bottomnav's `active`: a bare `noindex` would be a
+       ReferenceError on every page that does not set it.
+
+       An invite link is private by nature. It should not be indexed, and the
+       generic social tags are here so that a chat preview says something useful
+       instead of scraping whatever text the page happens to start with — which
+       on the join page would be the name of somebody's budget. %>
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="An invitation to share a weekly budget.">
+    <meta property="og:title" content="Join a weekly budget">
+    <meta property="og:description" content="Someone has invited you to share their weekly budget.">
+    <meta property="og:type" content="website">
+<% } %>
 </head>
 <body>
     <header class="appbar" id="appbar">

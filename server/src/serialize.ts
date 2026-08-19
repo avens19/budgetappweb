@@ -29,6 +29,11 @@ export interface CategoryRow {
   IsDeleted: boolean; OriginalId?: number | null;
 }
 
+export interface InviteRow {
+  Token: string; BudgetId: string; CreatedAt: string | null; ExpiresAt: string | null;
+  MaxUses: number; Uses: number; LastUsedAt: string | null; RevokedAt: string | null;
+}
+
 /** Anything the clients might send: PascalCase, camelCase, or absent. */
 export type Body = Record<string, unknown>;
 
@@ -117,6 +122,31 @@ export function category(row: CategoryRow | undefined): unknown {
     DateCreated: timestamp(row.DateCreated),
     DateUpdated: timestamp(row.DateUpdated),
     IsDeleted: row.IsDeleted,
+  };
+}
+
+/**
+ * An invite, with the link already built.
+ *
+ * PascalCase like everything else here. Nothing legacy reads this — invites did
+ * not exist on the old server — but a payload that follows a different
+ * convention to its neighbours is a trap for whoever writes the next client.
+ *
+ * The URL is assembled here rather than in each client so that the path lives in
+ * one place: it also has to match an intent filter on Android, an associated
+ * domain on iOS, and a route on the web, and four copies of "/join/" would
+ * eventually disagree.
+ */
+export function invite(row: InviteRow | undefined, origin: string): unknown {
+  if (!row) return null;
+  return {
+    Token: row.Token,
+    BudgetId: row.BudgetId,
+    Url: `${origin}/join/${row.Token}`,
+    CreatedAt: timestamp(row.CreatedAt),
+    ExpiresAt: timestamp(row.ExpiresAt),
+    MaxUses: row.MaxUses,
+    Uses: row.Uses,
   };
 }
 
