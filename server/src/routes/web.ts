@@ -80,6 +80,19 @@ web.get('/Budget/:id/Apps', asyncRoute(async (req, res) => {
   res.render('apps', { title: 'Apps', budget });
 }));
 
+// Who makes this and how to reach him. Both apps carry the same screen; this is
+// the copy for people who only ever use the website, and it is the only one of
+// the three that can name both stores. Paired for the same reason as above.
+web.get('/About', (req, res) => {
+  res.render('about', { title: 'About', budget: null });
+});
+
+web.get('/Budget/:id/About', asyncRoute(async (req, res) => {
+  const budget = await findBudget(param(req, 'id'));
+  if (!budget) return res.sendStatus(404);
+  res.render('about', { title: 'About', budget });
+}));
+
 /* --------------------------------------------------------------- deep links */
 
 /*

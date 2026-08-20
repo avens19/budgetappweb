@@ -1,18 +1,24 @@
 <%#
-    The two store links, in one file because three pages want them and a dead
+    The two store links, in one file because four pages want them and a dead
     store URL is the kind of thing you only notice from a bug report.
 
     The names really are different. "Weekly Budget" was already taken on the App
     Store, so the iOS app is listed as "Weekly Spend" — saying so here saves
     someone searching the wrong store for the wrong name.
+
+    `locals.review` points the same two listings at their rating flow, for the
+    About page. Read via locals, like bottomnav's `active`: a bare `review` would
+    be a ReferenceError on the pages that do not set it. Apple takes a query
+    parameter that opens the listing with the rating sheet already up; Play has
+    no equivalent, so that one lands on the listing and the reader taps a star.
 %>
 <ul class="app-links">
     <li>
-        <a href="https://apps.apple.com/app/id6803146065">Weekly Spend</a>
-        for iPhone and iPad
+        <a href="https://apps.apple.com/app/id6803146065<%= locals.review ? '?action=write-review' : '' %>">Weekly Spend</a>
+        <%= locals.review ? 'on the App Store' : 'for iPhone and iPad' %>
     </li>
     <li>
         <a href="https://play.google.com/store/apps/details?id=com.andrewovens.weeklybudget2">Weekly Budget</a>
-        for Android
+        <%= locals.review ? 'on Google Play' : 'for Android' %>
     </li>
 </ul>
