@@ -318,15 +318,28 @@ info "container healthy"
 
 step "Checking the site through $PUBLIC_URL"
 
-probe() {  # description, url, grep pattern
-  local body
-  body="$(curl -fsS --max-time 20 "$2" 2>/dev/null)" || { info "FAIL  $1 (request failed)"; return 1; }
+probe() {  # description, url, grep pattern, [accept-language]
+  local body; local -a hdr=()
+  [[ -n "${4:-}" ]] && hdr=(-H "Accept-Language: $4")
+  body="$(curl -fsS --max-time 20 "${hdr[@]}" "$2" 2>/dev/null)" || { info "FAIL  $1 (request failed)"; return 1; }
   if grep -q "$3" <<<"$body"; then info "ok    $1"; else info "FAIL  $1 (unexpected body)"; return 1; fi
 }
 
 failed=0
 probe "healthz reports the database reachable" "$PUBLIC_URL/healthz" '"ok":true' || failed=1
-probe "landing page renders"                   "$PUBLIC_URL/"        'New Budget'  || failed=1
+
+# The landing page is checked in two languages, because since the site was
+# translated "it renders" and "it renders in the right language" are separate
+# claims. A missing locale catalog in the image still serves a perfectly good
+# English page, and only the second probe would notice.
+#
+# Ask for a language explicitly rather than relying on curl's default, so the
+# expected words are a decision rather than an accident. Both strings are the
+# `page.newBudget` entry in server/src/locales/, and rewording it there means
+# reworking these two lines.
+probe "landing page renders in English" "$PUBLIC_URL/" 'New budget'     en || failed=1
+probe "and in French, so the catalogs shipped" \
+      "$PUBLIC_URL/" 'Nouveau budget' fr || failed=1
 
 # A feed for a budget that does not exist still stamps the header, so the
 # watermark format can be checked without writing anything. Fixed width matters:
