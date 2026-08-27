@@ -2,7 +2,6 @@
 #
 # Deploy the Node server to the Docker host.
 #
-#   export BUDGETAPP_SSH_PASSWORD='…'
 #   ./deploy/deploy.sh                 # deploy local HEAD
 #   ./deploy/deploy.sh --push          # push it to origin first
 #   ./deploy/deploy.sh --ref abc1234   # deploy a specific commit
@@ -14,11 +13,10 @@
 # The host pulls from origin, so what ships is whatever is on GitHub — not your
 # working tree. Uncommitted changes are reported and left behind.
 #
-# Authentication needs no extra tooling: OpenSSH 8.4+ will take a password from
-# an askpass helper when SSH_ASKPASS_REQUIRE=force, so there is no sshpass
-# dependency and the password never reaches a command line, where any user on
-# the machine could read it out of `ps`. The same password answers sudo on the
-# far end, fed in on stdin.
+# Authentication is worked out rather than configured; see the auth section
+# below. Given an SSH key and a login user in the host's docker group, a deploy
+# needs no password at all. Without that, BUDGETAPP_SSH_PASSWORD answers both
+# SSH and sudo.
 #
 # Only the one service is ever named in a compose command. The host's
 # docker-compose.yml also runs Caddy and a pile of media containers, and a bare
@@ -62,28 +60,47 @@ info() { printf '    %s\n' "$*"; }
 die()  { printf '\n\033[31mfailed:\033[0m %s\n' "$*" >&2; exit 1; }
 
 # ----------------------------------------------------------------------- auth
-
-: "${BUDGETAPP_SSH_PASSWORD:?set BUDGETAPP_SSH_PASSWORD (also used for sudo on the host)}"
-
-ASKPASS="$(mktemp "${TMPDIR:-/tmp}/budgetapp-askpass.XXXXXX")"
-chmod 700 "$ASKPASS"
-# The helper reads the password from the environment it inherits, so it is never
-# written to this file.
-cat > "$ASKPASS" <<'ASK'
-#!/bin/sh
-printf '%s\n' "$BUDGETAPP_SSH_PASSWORD"
-ASK
-trap 'rm -f "$ASKPASS"' EXIT
-export BUDGETAPP_SSH_PASSWORD
+#
+# Two ways onto the host, and the script works out which one it has.
+#
+# The quiet one: an SSH key, with the login user in the host's docker group.
+# No password is involved anywhere. It is worth setting up once:
+#
+#     ssh andrew@host 'sudo usermod -aG docker andrew'
+#
+# The fallback: BUDGETAPP_SSH_PASSWORD, answering both SSH and sudo. It needs
+# no extra tooling, because OpenSSH 8.4+ will take a password from an askpass
+# helper when SSH_ASKPASS_REQUIRE=force -- so there is no sshpass dependency,
+# and the password never reaches a command line where any user on the machine
+# could read it out of `ps`.
 
 SSH_OPTS=(
-  -o BatchMode=no
-  -o NumberOfPasswordPrompts=1
-  -o PreferredAuthentications=password,publickey
   -o StrictHostKeyChecking=accept-new
   -o ConnectTimeout=10
   -o LogLevel=ERROR
 )
+
+if [[ -n "${BUDGETAPP_SSH_PASSWORD:-}" ]]; then
+  ASKPASS="$(mktemp "${TMPDIR:-/tmp}/budgetapp-askpass.XXXXXX")"
+  chmod 700 "$ASKPASS"
+  # The helper reads the password from the environment it inherits, so it is
+  # never written to this file.
+  cat > "$ASKPASS" <<'ASK'
+#!/bin/sh
+printf '%s\n' "$BUDGETAPP_SSH_PASSWORD"
+ASK
+  trap 'rm -f "$ASKPASS"' EXIT
+  export BUDGETAPP_SSH_PASSWORD
+  SSH_OPTS+=( -o BatchMode=no
+              -o NumberOfPasswordPrompts=1
+              -o PreferredAuthentications=password,publickey )
+else
+  # Nothing here can answer a prompt, so refuse to sit at one. A deploy that
+  # hangs on an invisible question is worse than one that stops and says why.
+  ASKPASS=/dev/null
+  SSH_OPTS+=( -o BatchMode=yes
+              -o PreferredAuthentications=publickey )
+fi
 
 ssh_base() {
   SSH_ASKPASS="$ASKPASS" SSH_ASKPASS_REQUIRE=force DISPLAY="${DISPLAY:-:0}" \
@@ -97,13 +114,35 @@ rsh() {
   printf '%s' "$script" | ssh_base "bash -euo pipefail -s"
 }
 
-# Remote script on stdin, run as root — needed because the login user is not in
-# the docker group. `sudo -S` consumes exactly the first line of stdin as the
-# password and leaves the rest for the shell.
+ssh_base true 2>/dev/null || die "cannot ssh to $SSH_USER@$SSH_HOST -- add a key for this machine, or set BUDGETAPP_SSH_PASSWORD"
+
+# Ask the host whether docker needs sudo, rather than assuming it does. Group
+# membership is invisible from this end, and assuming the worst would demand a
+# password on a host deliberately set up not to need one.
+if ssh_base 'docker info' >/dev/null 2>&1; then
+  DOCKER_SUDO=0
+else
+  DOCKER_SUDO=1
+  [[ -n "${BUDGETAPP_SSH_PASSWORD:-}" ]] || die "$SSH_USER cannot reach the docker socket on $SSH_HOST, so every docker
+    command has to go through sudo, which wants a password. Either set
+    BUDGETAPP_SSH_PASSWORD, or grant the access once and be done with it:
+
+        ssh $SSH_USER@$SSH_HOST 'sudo usermod -aG docker $SSH_USER'
+
+    That takes effect on the next login, so it will not rescue this run."
+fi
+
+# Docker commands, run with whatever this host turns out to need. `sudo -S`
+# consumes exactly the first line of stdin as the password and leaves the rest
+# for the shell.
 rsudo() {
   local script; script="$(cat)"
-  { printf '%s\n' "$BUDGETAPP_SSH_PASSWORD"; printf '%s' "$script"; } \
-    | ssh_base "sudo -S -p '' bash -euo pipefail -s"
+  if [[ "$DOCKER_SUDO" == 0 ]]; then
+    printf '%s' "$script" | ssh_base "bash -euo pipefail -s"
+  else
+    { printf '%s\n' "$BUDGETAPP_SSH_PASSWORD"; printf '%s' "$script"; } \
+      | ssh_base "sudo -S -p '' bash -euo pipefail -s"
+  fi
 }
 
 # --------------------------------------------------------------------- rollback

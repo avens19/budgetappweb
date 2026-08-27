@@ -65,8 +65,15 @@ correctly. `server/test/contract.test.js` pins all of this:
 
 ## Deploying
 
-    export BUDGETAPP_SSH_PASSWORD='…'
     ./deploy/deploy.sh --push
+
+Authentication is worked out rather than configured. With an SSH key on the
+host and the login user in its docker group, that command needs no password at
+all; without the group membership, docker has to go through sudo, and
+`BUDGETAPP_SSH_PASSWORD` answers both it and SSH. The script says which of the
+two it found itself in, and the one command that fixes it for good:
+
+    ssh andrew@192.168.219.100 'sudo usermod -aG docker andrew'
 
 The host builds from its own checkout of this repo, so only committed and
 pushed work ships. The script rebuilds one service, recreates it, and checks
