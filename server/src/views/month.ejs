@@ -2,25 +2,25 @@
             <div class="appbar__titles">
                 <h1 class="appbar__title"><a href="/Budget/<%= budget.UniqueId %>"><%= budget.Name || "Weekly Budget" %></a></h1>
             </div>
-            <div class="appbar__actions"><button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentMonth()">Today</button>
+            <div class="appbar__actions"><button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentMonth()"><%= t('action.today') %></button>
     <a class="btn btn--icon" href="/Budget/<%= budget.UniqueId %>/Edit" title="Edit budget" aria-label="Edit budget"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zM15 9h2V7h4V5h-4V3h-2v6z"/></svg></a></div>
 <%- include('partials/afterbar') %>
 <div class="period">
     <button class="btn btn--icon" data-bind="click: monthBack" aria-label="Previous month">&#8249;</button>
     <button type="button" class="period__label" data-bind="text: monthLabel, click: pickDate"
-            title="Jump to a month"></button>
+            title="<%= t('month.jump') %>"></button>
     <%# A date rather than a month input: Safari still renders type="month" as a
        plain text box, and the iPhone browser is exactly who this page is for. %>
     <input class="period__input" type="date" id="monthPicker" tabindex="-1" aria-hidden="true"
            data-bind="event: { change: onDatePicked }" />
-    <button class="btn btn--icon" data-bind="click: monthAhead" aria-label="Next month">&#8250;</button>
+    <button class="btn btn--icon" data-bind="click: monthAhead" aria-label="<%= t('month.next') %>">&#8250;</button>
 </div>
 
 <section class="card card--hero">
-    <p class="hero__label">Spent this month</p>
+    <p class="hero__label"><%= t('month.spent') %></p>
     <p class="hero__amount" data-bind="text: money(total())"></p>
     <div class="hero__foot">
-        <span data-bind="text: 'Weekly budget ' + money(limit())"></span>
+        <span data-bind="text: t('js.weeklyBudget').replace('{amount}', money(limit()))"></span>
     </div>
 </section>
 
@@ -44,8 +44,8 @@
 </div>
 
 <div class="empty" data-bind="visible: !anySpending()">
-    <p class="empty__title">No expenses this month</p>
-    <p class="empty__body">Add expenses on the Week tab and they will roll up here.</p>
+    <p class="empty__title"><%= t('month.empty.title') %></p>
+    <p class="empty__body"><%= t('month.empty.body') %></p>
 </div>
 <%- include('partials/bottomnav', { budget: budget, active: 'month' }) %>
 <%- include('partials/scripts') %>
@@ -88,7 +88,7 @@
                 if (self.limit() <= 0) { return ''; }
                 return self.isUnder()
                     ? money(self.limit() - self.total()) + ' left'
-                    : 'Over by ' + money(self.total() - self.limit());
+                    : t('js.overBy').replace('{amount}', money(self.total() - self.limit()));
             });
         }
 

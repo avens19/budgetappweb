@@ -15,10 +15,10 @@
 <ul class="app-links">
     <li>
         <a href="https://apps.apple.com/app/id6803146065<%= locals.review ? '?action=write-review' : '' %>">Weekly Spend</a>
-        <%= locals.review ? 'on the App Store' : 'for iPhone and iPad' %>
+        <%= locals.review ? t('apps.link.appStore') : t('apps.link.iphone') %>
     </li>
     <li>
         <a href="https://play.google.com/store/apps/details?id=com.andrewovens.weeklybudget2">Weekly Budget</a>
-        <%= locals.review ? 'on Google Play' : 'for Android' %>
+        <%= locals.review ? t('apps.link.play') : t('apps.link.android') %>
     </li>
 </ul>

@@ -3,25 +3,25 @@
                 <h1 class="appbar__title"><a href="/Budget/<%= budget.UniqueId %>"><%= budget.Name || "Weekly Budget" %></a></h1>
             </div>
             <div class="appbar__actions">
-                <button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentPeriod()">Today</button>
+                <button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentPeriod()"><%= t('action.today') %></button>
                 <button class="btn btn--text" data-bind="click: toggleManage,
-                        text: managing() ? 'Done' : 'Manage'"></button>
+                        text: managing() ? t('js.done') : t('js.manage')"></button>
             </div>
 <%- include('partials/afterbar') %>
-<div class="segment" role="tablist" aria-label="Period">
+<div class="segment" role="tablist" aria-label="<%= t('categories.period') %>">
     <button class="segment__item" role="tab" data-bind="click: showWeek,
-            css: { 'is-active': mode() === 'week' }, attr: { 'aria-selected': mode() === 'week' }">Week</button>
+            css: { 'is-active': mode() === 'week' }, attr: { 'aria-selected': mode() === 'week' }"><%= t('segment.week') %></button>
     <button class="segment__item" role="tab" data-bind="click: showMonth,
-            css: { 'is-active': mode() === 'month' }, attr: { 'aria-selected': mode() === 'month' }">Month</button>
+            css: { 'is-active': mode() === 'month' }, attr: { 'aria-selected': mode() === 'month' }"><%= t('segment.month') %></button>
 </div>
 
 <div class="period">
-    <button class="btn btn--icon" data-bind="click: periodBack" aria-label="Previous period">&#8249;</button>
+    <button class="btn btn--icon" data-bind="click: periodBack" aria-label="<%= t('period.previous') %>">&#8249;</button>
     <button type="button" class="period__label" data-bind="text: periodLabel, click: pickDate"
-            title="Jump to a period"></button>
+            title="<%= t('period.jump') %>"></button>
     <input class="period__input" type="date" id="periodPicker" tabindex="-1" aria-hidden="true"
            data-bind="event: { change: onDatePicked }" />
-    <button class="btn btn--icon" data-bind="click: periodAhead" aria-label="Next period">&#8250;</button>
+    <button class="btn btn--icon" data-bind="click: periodAhead" aria-label="<%= t('period.next') %>">&#8250;</button>
 </div>
 
 <div data-bind="visible: !managing() && slices().length > 0">
@@ -48,7 +48,7 @@
             <text class="donut__center donut__caption" x="50" y="58"
                   data-bind="text: mode() === 'week' ? 'this week' : 'this month'"></text>
         </svg>
-        <p class="field__hint text-center">Tap a category to see its expenses</p>
+        <p class="field__hint text-center"><%= t('categories.tapHint') %></p>
     </section>
 
     <div class="legend" data-bind="foreach: slices">
@@ -81,8 +81,8 @@
 </div>
 
 <div class="empty" data-bind="visible: !managing() && slices().length === 0">
-    <p class="empty__title">Nothing to chart yet</p>
-    <p class="empty__body">Once you tag expenses with a category, the breakdown appears here.</p>
+    <p class="empty__title"><%= t('categories.empty.title') %></p>
+    <p class="empty__body"><%= t('categories.empty.body') %></p>
 </div>
 
 <%# Manage mode. Renaming and deleting are rare and destructive enough to keep
@@ -95,15 +95,15 @@
             <div class="row__head">
                 <span data-bind="text: Name"></span>
                 <span>
-                    <button class="btn btn--text" data-bind="click: function () { $root.rename($data); }">Rename</button>
-                    <button class="btn btn--text" data-bind="click: function () { $root.remove($data); }">Delete</button>
+                    <button class="btn btn--text" data-bind="click: function () { $root.rename($data); }"><%= t('action.rename') %></button>
+                    <button class="btn btn--text" data-bind="click: function () { $root.remove($data); }"><%= t('action.delete') %></button>
                 </span>
             </div>
         </div>
     </div>
     <div class="empty" data-bind="visible: categories().length === 0">
-        <p class="empty__title">No categories yet</p>
-        <p class="empty__body">Create a category while adding an expense and it will appear here.</p>
+        <p class="empty__title"><%= t('categories.manage.empty.title') %></p>
+        <p class="empty__body"><%= t('categories.manage.empty.body') %></p>
     </div>
 </div>
 <%- include('partials/bottomnav', { budget: budget, active: 'categories' }) %>
@@ -278,7 +278,9 @@
 
             this.chartLabel = ko.computed(function () {
                 var parts = self.slices().map(function (s) { return s.name + ' ' + s.share; });
-                return parts.length ? 'Spending by category: ' + parts.join(', ') : 'No spending to chart';
+                return parts.length
+                    ? t('js.chartLabel').replace('{parts}', parts.join(', '))
+                    : t('js.chartEmpty');
             });
 
             /* --------------------------------------------------- selection */
@@ -339,7 +341,7 @@
             };
 
             this.remove = function (category) {
-                if (!confirm('Delete "' + category.Name + '"?\n\nIts expenses stay, but lose their category.')) {
+                if (!confirm(t('js.confirmDeleteCategory').replace('{name}', category.Name))) {
                     return;
                 }
                 api.send('DELETE', '/api/Categories/' + category.Id)

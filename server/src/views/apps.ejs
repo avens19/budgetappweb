@@ -10,28 +10,23 @@
 %>
 <%- include('partials/head') %>
             <div class="appbar__titles">
-                <h1 class="appbar__title"><a href="<%= budget ? '/Budget/' + budget.UniqueId : '/' %>">Apps</a></h1>
+                <h1 class="appbar__title"><a href="<%= budget ? '/Budget/' + budget.UniqueId : '/' %>"><%= t('apps.title') %></a></h1>
                 <% if (budget) { %><span class="appbar__sub"><%= budget.Name || "Weekly Budget" %></span><% } %>
             </div>
             <div class="appbar__actions">
-                <a class="btn btn--text" href="<%= budget ? '/Budget/' + budget.UniqueId : '/' %>">Done</a>
+                <a class="btn btn--text" href="<%= budget ? '/Budget/' + budget.UniqueId : '/' %>"><%= t('action.done') %></a>
             </div>
 <%- include('partials/afterbar') %>
 <article class="prose">
     <span class="prose__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 1.01 7 1a2 2 0 0 0-2 2v18a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3a2 2 0 0 0-2-1.99zM17 19H7V5h10v14z"/></svg></span>
-    <h2>On your phone</h2>
-    <p>There is an app for both phones. Each one works on the same budget as this
-       page — same expenses, same total, in step within seconds.</p>
+    <h2><%= t('apps.phone.title') %></h2>
+    <p><%= t('apps.phone.body') %></p>
 <%- include('partials/appLinks') %>
 
     <span class="prose__icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14a7.82 7.82 0 0 1 0-4h3.38a16.6 16.6 0 0 0 0 4H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.99 7.99 0 0 1 5.08 16zm2.95-8H5.08a7.99 7.99 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82A13.7 13.7 0 0 1 12 19.96zM14.34 14H9.66a14.8 14.8 0 0 1 0-4h4.68a14.8 14.8 0 0 1 0 4zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a7.99 7.99 0 0 1-4.33 3.56zM16.36 14a16.6 16.6 0 0 0 0-4h3.38a7.82 7.82 0 0 1 0 4h-3.38z"/></svg></span>
-    <h2>Or just use this page</h2>
-    <p>Nothing has to be installed. This page works on the same budget in any
-       browser, and adding it to the home screen makes it behave much like an
-       app.</p>
-    <p>Whichever you use, a budget is shared by entering its ID on the other
-       device. <a href="<%= budget ? '/Budget/' + budget.UniqueId + '/HowItWorks' : '/HowItWorks' %>">How this works</a>
-       explains it.</p>
+    <h2><%= t('apps.web.title') %></h2>
+    <p><%= t('apps.web.body') %></p>
+    <p><%- t('apps.web.sharing', { href: budget ? '/Budget/' + budget.UniqueId + '/HowItWorks' : '/HowItWorks' }) %></p>
 </article>
 <% if (budget) { %>
 <%- include('partials/bottomnav', { budget: budget }) %>

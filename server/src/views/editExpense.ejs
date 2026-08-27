@@ -1,40 +1,40 @@
 <%- include('partials/head') %>
             <div class="appbar__titles">
-                <h1 class="appbar__title"><a href="/Budget/<%= budget.UniqueId %>">Edit expense</a></h1>
+                <h1 class="appbar__title"><a href="/Budget/<%= budget.UniqueId %>"><%= t('editExpense.title') %></a></h1>
                 <span class="appbar__sub"><%= budget.Name || "Weekly Budget" %></span>
             </div>
-            <div class="appbar__actions"><a class="btn btn--text" href="/Budget/<%= budget.UniqueId %>">Cancel</a></div>
+            <div class="appbar__actions"><a class="btn btn--text" href="/Budget/<%= budget.UniqueId %>"><%= t('action.cancel') %></a></div>
 <%- include('partials/afterbar') %>
 <section class="card amount-card">
-    <label class="field__label" for="amount">Amount</label>
+    <label class="field__label" for="amount"><%= t('expense.amount') %></label>
     <input class="field__input" id="amount" type="number" autofocus inputmode="decimal" step="0.01"
            placeholder="0" data-bind="value: amount, valueUpdate: 'input'" />
 </section>
 
 <div class="field mt-l">
-    <label class="field__label" for="description">Description</label>
+    <label class="field__label" for="description"><%= t('expense.description') %></label>
     <input class="field__input" id="description" type="text" data-bind="value: description" />
 </div>
 
 <div class="field">
-    <label class="field__label" for="date">Date</label>
+    <label class="field__label" for="date"><%= t('expense.date') %></label>
     <input class="field__input" id="date" type="date" data-bind="value: date" />
 </div>
 
 <div class="field">
-    <label class="field__label" for="category">Category</label>
+    <label class="field__label" for="category"><%= t('expense.category') %></label>
     <select class="field__input" id="category"
             data-bind="options: categoryOptions, optionsText: 'name', optionsValue: 'id',
                        value: categoryChoice"></select>
 </div>
 
 <div class="field" data-bind="visible: isNewCategory">
-    <label class="field__label" for="newCategory">New category name</label>
+    <label class="field__label" for="newCategory"><%= t('expense.newCategory') %></label>
     <input class="field__input" id="newCategory" type="text" data-bind="value: newCategoryName" />
 </div>
 
 <div class="form-actions stack">
-    <button class="btn btn--block" data-bind="click: save, disable: saving">Save changes</button>
+    <button class="btn btn--block" data-bind="click: save, disable: saving"><%= t('editExpense.save') %></button>
     <%# Both of these existed only on the phone. Without the first there was no
        way at all to remove an expense from the web. %>
     <button class="btn btn--block btn--outlined" data-bind="click: copyToNextWeek, disable: saving">
@@ -90,9 +90,9 @@
             }
 
             this.save = function () {
-                if (!self.description()) { alert('Enter a description'); return; }
+                if (!self.description()) { alert(t('js.enterDescription')); return; }
                 if (self.amount() === '' || isNaN(parseFloat(self.amount()))) {
-                    alert('Enter an amount');
+                    alert(t('js.enterAmount'));
                     return;
                 }
 
@@ -109,7 +109,7 @@
                         .then(function () { window.location.href = '/Budget/' + budgetId; })
                         .catch(function () {
                             self.saving(false);
-                            alert('Could not save that change. Please try again.');
+                            alert(t('js.changeSaveFailed'));
                         });
                 }, function (message) {
                     self.saving(false);
@@ -135,7 +135,7 @@
                         .then(function () { window.location.href = '/Budget/' + budgetId; })
                         .catch(function () {
                             self.saving(false);
-                            alert('Could not copy that expense. Please try again.');
+                            alert(t('js.expenseCopyFailed'));
                         });
                 }, function (message) {
                     self.saving(false);
@@ -144,13 +144,13 @@
             };
 
             this.remove = function () {
-                if (!confirm('Delete "' + self.description() + '"?')) { return; }
+                if (!confirm(t('js.confirmDeleteExpense').replace('{name}', self.description()))) { return; }
                 self.saving(true);
                 api.send('DELETE', '/api/Expense/<%= expense.Id %>')
                     .then(function () { window.location.href = '/Budget/' + budgetId; })
                     .catch(function () {
                         self.saving(false);
-                        alert('Could not delete that expense. Please try again.');
+                        alert(t('js.expenseDeleteFailed'));
                     });
             };
         }

@@ -20,33 +20,30 @@
 %>
 <%- include('partials/head') %>
             <div class="appbar__titles">
-                <h1 class="appbar__title"><a href="<%= backHref %>">Work out a weekly number</a></h1>
+                <h1 class="appbar__title"><a href="<%= backHref %>"><%= t('planner.title') %></a></h1>
                 <% if (budget) { %><span class="appbar__sub"><%= budget.Name || "Weekly Budget" %></span><% } %>
             </div>
             <div class="appbar__actions">
-                <a class="btn btn--text" href="<%= backHref %>">Cancel</a>
+                <a class="btn btn--text" href="<%= backHref %>"><%= t('action.cancel') %></a>
             </div>
 <%- include('partials/afterbar') %>
 
-<p class="muted mt-l">
-    Answer whichever of these you know. Anything left blank counts as nothing,
-    and none of it reaches your budget until you press the button at the bottom.
-</p>
+<p class="muted mt-l"><%= t('planner.intro') %></p>
 
 <!-- ko foreach: groups -->
-<h2 class="section-head" data-bind="text: title"></h2>
-<p class="muted" style="margin:0 0 8px" data-bind="text: help"></p>
+<h2 class="section-head" data-bind="text: t(title)"></h2>
+<p class="muted" style="margin:0 0 8px" data-bind="text: t(help)"></p>
 
 <!-- ko foreach: lines -->
 <div class="field">
-    <label class="field__label" data-bind="text: label, attr: { for: id }"></label>
+    <label class="field__label" data-bind="text: t(key), attr: { for: id }"></label>
     <div style="display:flex; gap:8px; align-items:center">
         <input class="field__input" type="number" inputmode="decimal" step="0.01"
                placeholder="0.00" style="flex:1; min-width:0"
                data-bind="value: amount, valueUpdate: 'input', attr: { id: id }" />
         <select class="field__input" style="flex:0 0 auto; width:auto"
-                data-bind="options: $root.periods, optionsText: 'label', value: period,
-                           attr: { 'aria-label': 'How often: ' + label }"></select>
+                data-bind="options: $root.periods, optionsText: $root.periodText, value: period,
+                           attr: { 'aria-label': t('js.planner.howOften').replace('{name}', t(key)) }"></select>
     </div>
 </div>
 <!-- /ko -->
@@ -58,11 +55,11 @@
     sticky rather than sitting at the end of seventeen fields.
 %>
 <section class="card card--hero mt-l" style="position:sticky; bottom:12px">
-    <div class="hero__label">Left to spend each week</div>
+    <div class="hero__label"><%= t('planner.result') %></div>
     <div class="hero__amount" data-bind="text: weeklyText"></div>
     <div class="hero__foot muted" data-bind="text: note"></div>
     <div class="form-actions">
-        <button class="btn btn--block" data-bind="click: use, enable: usable">Use this amount</button>
+        <button class="btn btn--block" data-bind="click: use, enable: usable"><%= t('planner.use') %></button>
     </div>
 </section>
 
@@ -83,10 +80,10 @@
         var TARGET = <%- JSON.stringify(targetHref) %>;
 
         function Line(spec, index) {
-            this.label = spec.label;
+            this.key = spec.key;
             this.id = 'line' + index;
             this.amount = ko.observable('');
-            this.period = ko.observable(W.periodByLabel(spec.period));
+            this.period = ko.observable(W.periodByKey(spec.period));
         }
 
         Line.prototype.perYear = function () {
@@ -97,6 +94,9 @@
             var self = this, index = 0;
 
             self.periods = W.PERIODS;
+            // Knockout's optionsText takes a function when the label is not a
+            // property of the option: these carry a key, not a name.
+            self.periodText = function (period) { return t(period.key); };
             self.groups = W.GROUPS.map(function (group) {
                 return {
                     title: group.title,
@@ -106,7 +106,7 @@
                 };
             });
 
-            var totals = ko.computed(function () {
+            var totalsOf = ko.computed(function () {
                 var income = 0, outgoing = 0;
                 self.groups.forEach(function (group) {
                     group.lines.forEach(function (line) {
@@ -118,7 +118,7 @@
             });
 
             self.weekly = ko.computed(function () {
-                return W.weekly(totals().income, totals().outgoing);
+                return W.weekly(totalsOf().income, totalsOf().outgoing);
             });
 
             self.weeklyText = ko.computed(function () { return money(self.weekly()); });
@@ -127,16 +127,16 @@
             // Nothing entered yet is not a finding; more going out than coming
             // in is, and it is the one this page exists to surface.
             self.note = ko.computed(function () {
-                var t = totals();
-                if (t.income === 0 && t.outgoing === 0) {
-                    return 'Fill in what you can. The number updates as you type.';
+                var totals = totalsOf();
+                if (totals.income === 0 && totals.outgoing === 0) {
+                    return t('js.planner.note.empty');
                 }
                 if (self.weekly() <= 0) {
-                    return 'That leaves nothing to spend each week. Check the figures - '
-                         + 'or leave the steady spending out and track it week to week instead.';
+                    return t('js.planner.note.short');
                 }
-                return money(t.income / W.MONTHS_PER_YEAR) + ' a month in · '
-                     + money(t.outgoing / W.MONTHS_PER_YEAR) + ' a month out';
+                return t('js.planner.note.monthly')
+                    .replace('{in}', money(totals.income / W.MONTHS_PER_YEAR))
+                    .replace('{out}', money(totals.outgoing / W.MONTHS_PER_YEAR));
             });
 
             self.use = function () {

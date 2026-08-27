@@ -1,12 +1,15 @@
 <%- include('partials/head') %>
             <div class="appbar__titles">
-                <h1 class="appbar__title"><a href="/">Privacy</a></h1>
+                <h1 class="appbar__title"><a href="/"><%= t('privacy.title') %></a></h1>
             </div>
             <div class="appbar__actions"></div>
 <%- include('partials/afterbar') %>
 <article class="prose">
     <p class="muted">Last updated 19 August 2026.</p>
 
+    <% if (locale !== 'en') { %>
+    <p class="muted"><em><%= t('privacy.englishOnly') %></em></p>
+    <% } %>
     <p>Weekly Budget is run by one person as a personal project. It has no
        advertising, no trackers and no third-party services. This page describes
        everything it does with your data, which is not much.</p>

@@ -21,7 +21,7 @@ async function findBudget(id: string): Promise<unknown> {
 /** A fresh, unsaved budget for the landing page to bind its form to. */
 web.get('/', (req, res) => {
   res.render('newBudget', {
-    title: 'New Budget',
+    title: res.locals.t('page.newBudget'),
     budget: { UniqueId: crypto.randomUUID(), Name: '', StartDay: 0, Amount: 0,
               StartDayOfWeek: 'Sunday' },
   });
@@ -34,37 +34,37 @@ web.get('/Budget/:id', asyncRoute(async (req, res) => {
   // The old page showed a "bookmark this" alert on the first view after
   // creating a budget, tracked in session state. A query flag does the same
   // job without the app needing a session store at all.
-  res.render('week', { title: 'Weekly Budget', budget, first: req.query.new === '1' });
+  res.render('week', { title: res.locals.t('page.week'), budget, first: req.query.new === '1' });
 }));
 
 web.get('/Budget/:id/Month', asyncRoute(async (req, res) => {
   const budget = await findBudget(param(req, 'id'));
   if (!budget) return res.sendStatus(404);
-  res.render('month', { title: 'Month', budget });
+  res.render('month', { title: res.locals.t('page.month'), budget });
 }));
 
 web.get('/Budget/:id/Categories', asyncRoute(async (req, res) => {
   const budget = await findBudget(param(req, 'id'));
   if (!budget) return res.sendStatus(404);
-  res.render('categories', { title: 'Categories', budget });
+  res.render('categories', { title: res.locals.t('page.categories'), budget });
 }));
 
 // Required by the App Store, and linked from the landing page. No budget
 // context: the reviewer opens it cold, and so does anyone curious.
 web.get('/privacy', (req, res) => {
-  res.render('privacy', { title: 'Privacy' });
+  res.render('privacy', { title: res.locals.t('privacy.title') });
 });
 
 // Reachable with or without a budget: the landing page links here before one
 // exists, and the app bar has to know where "Done" goes back to.
 web.get('/HowItWorks', (req, res) => {
-  res.render('howItWorks', { title: 'How this works', budget: null });
+  res.render('howItWorks', { title: res.locals.t('howItWorks.title'), budget: null });
 });
 
 web.get('/Budget/:id/HowItWorks', asyncRoute(async (req, res) => {
   const budget = await findBudget(param(req, 'id'));
   if (!budget) return res.sendStatus(404);
-  res.render('howItWorks', { title: 'How this works', budget });
+  res.render('howItWorks', { title: res.locals.t('howItWorks.title'), budget });
 }));
 
 /*
@@ -75,7 +75,7 @@ web.get('/Budget/:id/HowItWorks', asyncRoute(async (req, res) => {
  */
 web.get('/WeeklyNumber', (req, res) => {
   res.render('weeklyNumber', {
-    title: 'Work out a weekly number', budget: null,
+    title: res.locals.t('planner.title'), budget: null,
     backHref: '/', targetHref: '/',
   });
 });
@@ -85,7 +85,7 @@ web.get('/Budget/:id/WeeklyNumber', asyncRoute(async (req, res) => {
   const budget = await findBudget(id);
   if (!budget) return res.sendStatus(404);
   res.render('weeklyNumber', {
-    title: 'Work out a weekly number', budget,
+    title: res.locals.t('planner.title'), budget,
     backHref: `/Budget/${id}/Edit`, targetHref: `/Budget/${id}/Edit`,
   });
 }));
@@ -94,26 +94,26 @@ web.get('/Budget/:id/WeeklyNumber', asyncRoute(async (req, res) => {
 // has to name it — see the comment at the top of apps.ejs. Paired with and
 // without a budget for the same reason as HowItWorks.
 web.get('/Apps', (req, res) => {
-  res.render('apps', { title: 'Apps', budget: null });
+  res.render('apps', { title: res.locals.t('apps.title'), budget: null });
 });
 
 web.get('/Budget/:id/Apps', asyncRoute(async (req, res) => {
   const budget = await findBudget(param(req, 'id'));
   if (!budget) return res.sendStatus(404);
-  res.render('apps', { title: 'Apps', budget });
+  res.render('apps', { title: res.locals.t('apps.title'), budget });
 }));
 
 // Who makes this and how to reach him. Both apps carry the same screen; this is
 // the copy for people who only ever use the website, and it is the only one of
 // the three that can name both stores. Paired for the same reason as above.
 web.get('/About', (req, res) => {
-  res.render('about', { title: 'About', budget: null });
+  res.render('about', { title: res.locals.t('about.title'), budget: null });
 });
 
 web.get('/Budget/:id/About', asyncRoute(async (req, res) => {
   const budget = await findBudget(param(req, 'id'));
   if (!budget) return res.sendStatus(404);
-  res.render('about', { title: 'About', budget });
+  res.render('about', { title: res.locals.t('about.title'), budget });
 }));
 
 /* --------------------------------------------------------------- deep links */
@@ -190,7 +190,7 @@ web.get('/join/:token', asyncRoute(async (req, res) => {
   const state = await inspect(param(req, 'token'));
   joinHeaders(res);
   res.render('join', {
-    title: 'Join a budget',
+    title: res.locals.t('join.title'),
     budget: null,
     state: state.status,
     budgetName: state.budgetName ?? '',
@@ -204,7 +204,7 @@ web.post('/join/:token', asyncRoute(async (req, res) => {
 
   if ('failed' in result) {
     return res.status(result.failed === 'missing' ? 404 : 410).render('join', {
-      title: 'Join a budget',
+      title: res.locals.t('join.title'),
       budget: null,
       state: result.failed,
       budgetName: '',
@@ -236,13 +236,13 @@ function joinHeaders(res: Response): void {
 web.get('/Budget/:id/Add', asyncRoute(async (req, res) => {
   const budget = await findBudget(param(req, 'id'));
   if (!budget) return res.sendStatus(404);
-  res.render('addExpense', { title: 'Add Expense', budget });
+  res.render('addExpense', { title: res.locals.t('addExpense.title'), budget });
 }));
 
 web.get('/Budget/:id/Edit', asyncRoute(async (req, res) => {
   const budget = await findBudget(param(req, 'id'));
   if (!budget) return res.sendStatus(404);
-  res.render('editBudget', { title: 'Edit Budget', budget });
+  res.render('editBudget', { title: res.locals.t('editBudget.title'), budget });
 }));
 
 web.get('/Budget/:id/Edit/:expenseId', asyncRoute(async (req, res) => {
@@ -253,7 +253,7 @@ web.get('/Budget/:id/Edit/:expenseId', asyncRoute(async (req, res) => {
   if (!rows.length) return res.sendStatus(404);
 
   res.render('editExpense', {
-    title: 'Edit Expense',
+    title: res.locals.t('editExpense.title'),
     budget,
     expense: wire.expense(rows[0] as never),
   });

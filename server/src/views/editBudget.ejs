@@ -1,44 +1,43 @@
 <%- include('partials/head') %>
             <div class="appbar__titles">
-                <h1 class="appbar__title"><a href="/Budget/<%= budget.UniqueId %>">Edit budget</a></h1>
+                <h1 class="appbar__title"><a href="/Budget/<%= budget.UniqueId %>"><%= t('editBudget.title') %></a></h1>
                 <span class="appbar__sub"><%= budget.Name || "Weekly Budget" %></span>
             </div>
-            <div class="appbar__actions"><a class="btn btn--text" href="/Budget/<%= budget.UniqueId %>">Cancel</a></div>
+            <div class="appbar__actions"><a class="btn btn--text" href="/Budget/<%= budget.UniqueId %>"><%= t('action.cancel') %></a></div>
 <%- include('partials/afterbar') %>
 <div class="field mt-l">
-    <label class="field__label" for="name">Budget name</label>
-    <input class="field__input" id="name" type="text" data-bind="value: name" placeholder="Household" />
+    <label class="field__label" for="name"><%= t('budget.name') %></label>
+    <input class="field__input" id="name" type="text" data-bind="value: name" placeholder="<%= t('budget.name.example') %>" />
 </div>
 
 <div class="field">
-    <label class="field__label" for="amount">Weekly amount</label>
+    <label class="field__label" for="amount"><%= t('budget.amount') %></label>
     <input class="field__input" id="amount" type="number" inputmode="decimal" step="0.01"
            data-bind="value: amount" placeholder="0.00" />
     <%# Directly under the field, because "how much a week?" is the question
        this page asks that people cannot answer. %>
-    <p class="field__hint" style="margin-top:6px"><a href="/Budget/<%= budget.UniqueId %>/WeeklyNumber">Not sure? Work it out</a></p>
+    <p class="field__hint" style="margin-top:6px"><a href="/Budget/<%= budget.UniqueId %>/WeeklyNumber"><%= t('planner.open') %></a></p>
 </div>
 
 <div class="field">
-    <label class="field__label" for="startDay">Week starts on</label>
+    <label class="field__label" for="startDay"><%= t('budget.startDay') %></label>
     <select class="field__input" id="startDay" data-bind="options: dates, value: startDay"></select>
 </div>
 
 <section class="card">
     <div class="id-card">
         <div>
-            <div class="field__label" style="margin-bottom:4px">Budget ID</div>
+            <div class="field__label" style="margin-bottom:4px"><%= t('budget.id') %></div>
             <div class="id-card__value" data-bind="text: uniqueId"></div>
             <p class="field__hint" style="margin-left:0">
-                Share this ID to open the same budget on another device, or in the
-                iPhone or Android app.
+                <%= t('budget.id.hint') %>
             </p>
             <p style="margin:12px 0 0">
-                <a href="/Budget/<%= budget.UniqueId %>/HowItWorks">How this works</a>
+                <a href="/Budget/<%= budget.UniqueId %>/HowItWorks"><%= t('howItWorks.title') %></a>
                 &middot;
-                <a href="/Budget/<%= budget.UniqueId %>/Apps">Get the app</a>
+                <a href="/Budget/<%= budget.UniqueId %>/Apps"><%= t('join.getApp') %></a>
                 &middot;
-                <a href="/Budget/<%= budget.UniqueId %>/About">About</a>
+                <a href="/Budget/<%= budget.UniqueId %>/About"><%= t('about.title') %></a>
             </p>
         </div>
     </div>
@@ -51,26 +50,25 @@
     how to join that way.
 %>
 <section class="card mt-l">
-    <div class="field__label">Invite someone</div>
+    <div class="field__label"><%= t('invite.heading') %></div>
     <p class="field__hint" style="margin-left:0">
-        A one-time link, good for seven days. Better than sending the ID: it stops
-        working once it has been used, and you can cancel it.
+        <%= t('invite.hint') %>
     </p>
     <div class="form-actions">
-        <button class="btn btn--block btn--outlined" id="invite-create">Create an invite link</button>
+        <button class="btn btn--block btn--outlined" id="invite-create"><%= t('invite.create') %></button>
     </div>
     <div id="invite-result" hidden>
         <div class="id-card__value" id="invite-url" style="word-break:break-all"></div>
         <div class="form-actions stack">
-            <button class="btn btn--block" id="invite-share">Share link</button>
-            <button class="btn btn--block btn--outlined" id="invite-copy">Copy link</button>
-            <button class="btn btn--block btn--danger" id="invite-revoke">Cancel this invite</button>
+            <button class="btn btn--block" id="invite-share"><%= t('invite.share') %></button>
+            <button class="btn btn--block btn--outlined" id="invite-copy"><%= t('invite.copy') %></button>
+            <button class="btn btn--block btn--danger" id="invite-revoke"><%= t('invite.revoke') %></button>
         </div>
     </div>
 </section>
 
 <div class="form-actions">
-    <button class="btn btn--block" data-bind="click: save, disable: saving">Save budget</button>
+    <button class="btn btn--block" data-bind="click: save, disable: saving"><%= t('budget.save') %></button>
 </div>
 <%- include('partials/bottomnav', { budget: budget }) %>
 <%- include('partials/scripts') %>
@@ -94,7 +92,7 @@
 
             this.save = function () {
                 if (self.amount() === '' || isNaN(parseFloat(self.amount()))) {
-                    alert('Enter a weekly amount');
+                    alert(t('js.enterWeeklyAmount'));
                     return;
                 }
 
@@ -108,7 +106,7 @@
                     .then(function () { window.location.href = '/Budget/' + uniqueId; })
                     .catch(function () {
                         self.saving(false);
-                        alert('Could not save that budget. Please try again.');
+                        alert(t('js.budgetSaveFailed'));
                     });
             };
         }
@@ -138,12 +136,12 @@
                         token = invite.Token;
                         urlBox.textContent = invite.Url;
                         result.hidden = false;
-                        create.textContent = 'Create another link';
+                        create.textContent = t('js.inviteCreateAnother');
                         create.disabled = false;
                     })
                     .catch(function () {
                         create.disabled = false;
-                        alert('Could not create an invite link. Please try again.');
+                        alert(t('js.inviteCreateFailed'));
                     });
             });
 
@@ -157,8 +155,8 @@
 
             copyBtn.addEventListener('click', function () {
                 var done = function () {
-                    copyBtn.textContent = 'Copied';
-                    setTimeout(function () { copyBtn.textContent = 'Copy link'; }, 2000);
+                    copyBtn.textContent = t('js.copied');
+                    setTimeout(function () { copyBtn.textContent = t('js.inviteCopy'); }, 2000);
                 };
                 // clipboard.writeText needs a secure context, which a plain-HTTP
                 // visit is not, so there has to be something to fall back to.
@@ -182,9 +180,9 @@
                     .then(function () {
                         result.hidden = true;
                         token = null;
-                        create.textContent = 'Create an invite link';
+                        create.textContent = t('js.inviteCreate');
                     })
-                    .catch(function () { alert('Could not cancel that invite.'); });
+                    .catch(function () { alert(t('js.inviteCancelFailed')); });
             });
         })();
     </script>

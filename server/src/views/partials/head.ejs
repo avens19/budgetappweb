@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<html lang="en">
+<%# lang and dir come from the language middleware; dir flips the whole
+   document for Arabic, the one right-to-left locale shipped. %>
+<html lang="<%= locale %>" dir="<%= dir %>">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -29,9 +31,9 @@
        instead of scraping whatever text the page happens to start with — which
        on the join page would be the name of somebody's budget. %>
     <meta name="robots" content="noindex, nofollow">
-    <meta name="description" content="An invitation to share a weekly budget.">
-    <meta property="og:title" content="Join a weekly budget">
-    <meta property="og:description" content="Someone has invited you to share their weekly budget.">
+    <meta name="description" content="<%= t('join.meta.description') %>">
+    <meta property="og:title" content="<%= t('join.meta.title') %>">
+    <meta property="og:description" content="<%= t('join.meta.body') %>">
     <meta property="og:type" content="website">
 <% } %>
 </head>

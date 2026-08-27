@@ -2,25 +2,25 @@
             <div class="appbar__titles">
                 <h1 class="appbar__title"><a href="/Budget/<%= budget.UniqueId %>"><%= budget.Name || "Weekly Budget" %></a></h1>
             </div>
-            <div class="appbar__actions"><button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentWeek()">Today</button>
+            <div class="appbar__actions"><button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentWeek()"><%= t('action.today') %></button>
     <a class="btn btn--icon" href="/Budget/<%= budget.UniqueId %>/Edit" title="Edit budget" aria-label="Edit budget"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zM15 9h2V7h4V5h-4V3h-2v6z"/></svg></a></div>
 <%- include('partials/afterbar') %>
 <%# Stepping a week at a time is fine for last week and useless for last
    March, so the heading opens a date picker and jumps to whichever week
    contains the date chosen. %>
 <div class="period">
-    <button class="btn btn--icon" data-bind="click: weekBack" aria-label="Previous week">&#8249;</button>
-    <button type="button" class="period__label" data-bind="click: pickDate" title="Jump to a week">
+    <button class="btn btn--icon" data-bind="click: weekBack" aria-label="<%= t('week.previous') %>">&#8249;</button>
+    <button type="button" class="period__label" data-bind="click: pickDate" title="<%= t('week.jump') %>">
         <span data-bind="text: periodLabel"></span>
         <span class="period__sub" data-bind="text: periodSub, visible: periodSub"></span>
     </button>
     <input class="period__input" type="date" id="weekPicker" tabindex="-1" aria-hidden="true"
            data-bind="value: pickerValue, event: { change: onDatePicked }" />
-    <button class="btn btn--icon" data-bind="click: weekAhead" aria-label="Next week">&#8250;</button>
+    <button class="btn btn--icon" data-bind="click: weekAhead" aria-label="<%= t('week.next') %>">&#8250;</button>
 </div>
 
 <section class="card card--hero" data-bind="css: { 'card--over': !isUnder() }">
-    <p class="hero__label" data-bind="text: isUnder() ? 'Left to spend' : 'Over budget'"></p>
+    <p class="hero__label" data-bind="text: isUnder() ? t('js.leftToSpend') : t('js.overBudget')"></p>
     <p class="hero__amount" data-bind="text: money(remaining())"></p>
     <div class="progress">
         <div class="progress__fill" data-bind="style: { width: spentPercent() + '%' }"></div>
@@ -30,7 +30,7 @@
         <%# Only offered when there is something to carry: the app hides it once
            the week is spent, and an "carry $0.00 forward" button is noise. %>
         <button class="btn btn--text" data-bind="click: carryBalance, visible: canCarry">
-            Carry balance
+            <%= t('week.carry') %>
         </button>
     </div>
 </section>
@@ -53,8 +53,8 @@
 </div>
 
 <div class="empty" data-bind="visible: expenses().length === 0">
-    <p class="empty__title">Nothing spent yet</p>
-    <p class="empty__body">Expenses you add for this week will show up here.</p>
+    <p class="empty__title"><%= t('week.empty.title') %></p>
+    <p class="empty__body"><%= t('week.empty.body') %></p>
 </div>
 <%- include('partials/bottomnav', { budget: budget, active: 'week' }) %>
 <%- include('partials/scripts') %>
@@ -133,9 +133,9 @@
                 var end = new Date(self.weekEnd()); end.setHours(0, 0, 0, 0);
                 if (now < start || now > end) { return ''; }
                 var daysLeft = Math.round((end - now) / 86400000);
-                if (daysLeft === 0) { return 'This week · Last day'; }
-                if (daysLeft === 1) { return 'This week · 1 day left'; }
-                return 'This week · ' + daysLeft + ' days left';
+                if (daysLeft === 0) { return t('js.weekLastDay'); }
+                if (daysLeft === 1) { return t('js.weekOneDayLeft'); }
+                return t('js.weekDaysLeft').replace('{days}', daysLeft);
             });
 
             // Expenses grouped under a heading per day, as on the phone.
@@ -224,12 +224,12 @@
             // IsSystem marks it as generated rather than something typed.
             this.carryBalance = function () {
                 var rounded = Math.round(self.remaining() * 100) / 100;
-                if (!confirm('Move the remaining ' + money(rounded) + ' into next week?')) { return; }
+                if (!confirm(t('js.confirmCarry').replace('{amount}', money(rounded)))) { return; }
 
                 var next = self.weekStart().addDays(7);
                 api.send('POST', '/api/Expense', {
                     date: toDateInput(next),
-                    description: 'Carried Balance',
+                    description: t('js.carriedBalance'),
                     amount: -rounded,
                     budgetId: self.budgetId,
                     isSystem: true

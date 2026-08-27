@@ -1,2 +1,16 @@
+    <form class="langbar" method="get" action="">
+        <%# Keeps whatever query the page already had - ?new=1 on a fresh budget,
+           for one - so switching language does not throw the page's state away. %>
+        <% Object.keys(locals.query || {}).filter(function (n) { return n !== 'lang'; }).forEach(function (name) { %>
+        <input type="hidden" name="<%= name %>" value="<%= locals.query[name] %>">
+        <% }) %>
+        <label class="visually-hidden" for="lang"><%= t('language.label') %></label>
+        <select class="langbar__select" id="lang" name="lang" onchange="this.form.submit()">
+            <% languages.forEach(function (language) { %>
+            <option value="<%= language.code %>" <%= language.code === locale ? 'selected' : '' %>><%= language.name %></option>
+            <% }) %>
+        </select>
+        <noscript><button class="btn btn--text" type="submit"><%= t('language.apply') %></button></noscript>
+    </form>
 </body>
 </html>

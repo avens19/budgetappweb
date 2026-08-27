@@ -10,54 +10,47 @@
     app now gives on first run.
 %>
 <section class="card mt-l">
-    <h2 class="empty__title" style="margin-bottom:10px">Budget your spending money</h2>
-    <p class="muted" style="margin:0 0 12px">
-        Work out what is left after your pay and the bills that never change —
-        rent, insurance, subscriptions. Whatever remains is your spending money.
-        Split it across the weeks in the month and that is your weekly target.
-    </p>
-    <p class="muted" style="margin:0">
-        There is deliberately nowhere to enter recurring income or expenses. If
-        money comes in mid-week, add it as an expense with a minus sign.
-    </p>
-    <p style="margin:12px 0 0"><a href="/HowItWorks">How this works</a> &middot; <a href="/Apps">Apps</a> &middot; <a href="/About">About</a> &middot; <a href="/privacy">Privacy</a></p>
+    <h2 class="empty__title" style="margin-bottom:10px"><%= t('tutorial.1.title') %></h2>
+    <p class="muted" style="margin:0 0 12px"><%= t('landing.lead1') %></p>
+    <p class="muted" style="margin:0"><%= t('landing.lead2') %></p>
+    <p style="margin:12px 0 0"><a href="/HowItWorks"><%= t('howItWorks.title') %></a> &middot; <a href="/Apps"><%= t('apps.title') %></a> &middot; <a href="/About"><%= t('about.title') %></a> &middot; <a href="/privacy"><%= t('privacy.title') %></a></p>
 </section>
 
-<h2 class="section-head" style="margin-top:28px">Create your budget</h2>
+<h2 class="section-head" style="margin-top:28px"><%= t('landing.create') %></h2>
 
 <div class="field">
-    <label class="field__label" for="name">Budget name</label>
-    <input class="field__input" id="name" type="text" data-bind="value: name" placeholder="Household" />
+    <label class="field__label" for="name"><%= t('budget.name') %></label>
+    <input class="field__input" id="name" type="text" data-bind="value: name" placeholder="<%= t('budget.name.example') %>" />
 </div>
 
 <div class="field">
-    <label class="field__label" for="amount">Weekly amount</label>
+    <label class="field__label" for="amount"><%= t('budget.amount') %></label>
     <input class="field__input" id="amount" type="number" inputmode="decimal" step="0.01"
            data-bind="value: amount" placeholder="0.00" />
     <%# Directly under the field, because "how much a week?" is the question
        this page asks that people cannot answer. %>
-    <p class="field__hint" style="margin-top:6px"><a href="/WeeklyNumber">Not sure? Work it out</a></p>
+    <p class="field__hint" style="margin-top:6px"><a href="/WeeklyNumber"><%= t('planner.open') %></a></p>
 </div>
 
 <div class="field">
-    <label class="field__label" for="startDay">Week starts on</label>
+    <label class="field__label" for="startDay"><%= t('budget.startDay') %></label>
     <select class="field__input" id="startDay" data-bind="options: dates, value: startDay"></select>
 </div>
 
 <section class="card">
     <div class="id-card">
         <div>
-            <div class="field__label" style="margin-bottom:4px">Budget ID</div>
+            <div class="field__label" style="margin-bottom:4px"><%= t('budget.id') %></div>
             <div class="id-card__value" data-bind="text: uniqueId"></div>
             <p class="field__hint" style="margin-left:0">
-                Share this ID to open the same budget on another device, or in the Android app.
+                <%= t('budget.id.hintAndroid') %>
             </p>
         </div>
     </div>
 </section>
 
 <div class="form-actions">
-    <button class="btn btn--block" data-bind="click: newBudget, disable: saving">Create budget</button>
+    <button class="btn btn--block" data-bind="click: newBudget, disable: saving"><%= t('budget.create') %></button>
 </div>
 <%- include('partials/beforenav') %>
 <%- include('partials/scripts') %>
@@ -82,7 +75,7 @@
 
             this.newBudget = function () {
                 if (self.amount() === '' || isNaN(parseFloat(self.amount()))) {
-                    alert('Enter a weekly amount');
+                    alert(t('js.enterWeeklyAmount'));
                     return;
                 }
 
@@ -96,7 +89,7 @@
                     .then(function () { window.location.href = '/Budget/' + uniqueId; })
                     .catch(function () {
                         self.saving(false);
-                        alert('Could not create that budget. Please try again.');
+                        alert(t('js.budgetCreateFailed'));
                     });
             };
         }

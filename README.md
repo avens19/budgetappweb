@@ -13,6 +13,31 @@ the working tree but remains in history at `2b89278` if it is ever needed.
     server/migrations/          schema, and the one-time move off SQL Server
     deploy/deploy.sh            build and release to the Docker host
 
+## Languages
+
+English is the source of truth in `server/src/locales/en.json`; twenty more
+catalogs sit beside it, the same set the phones ship: es, es-US, pt-BR, pt-PT,
+fr, de, it, nl, ru, uk, pl, tr, ar, hi, id, ja, ko, zh-CN, zh-TW, vi.
+
+The middleware in `index.ts` picks a locale per request: `?lang=` wins and is
+remembered in a cookie for a year, otherwise `Accept-Language` decides. It sets
+`res.locals.t` for the views, `lang`/`dir` for the document (Arabic is the one
+right-to-left locale), and `clientStrings` — the `js.*` half of the catalog,
+handed to page scripts for the text they put on screen themselves.
+
+- Views call `t('key')`, page scripts call the same `t` on `window.T`.
+- The weekly-number helper holds *keys*, not words, in `public/weekly-number.js`.
+  English there is a string translations never reach.
+- The copy is shared with the apps word for word, so most of these catalogs are
+  the Android translations rather than a second opinion on the same sentence.
+- `test/i18n.test.js` fails when a key is added to English and not to the other
+  twenty, or when a translation drops a `{placeholder}` or an `<a>` tag. The
+  Android build gets that from lint; this is the same rule.
+
+The privacy policy is deliberately English-only, with a translated note saying
+so. It is a statement about what happens to somebody's data, and a translation
+that drifted would make it untrue.
+
 ## The contract is load-bearing
 
 `CONTRACT.md` was captured from the running ASP.NET server rather than inferred

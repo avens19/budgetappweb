@@ -1,5 +1,18 @@
     <script src="/knockout-3.3.0.js"></script>
     <script type="text/javascript">
+        // The js.* half of the catalog, for the strings a page script puts on
+        // screen itself - alerts, button labels it swaps, the name it shows for
+        // an expense with no category. The markup gets its text from EJS; this
+        // is the rest.
+        window.T = <%- JSON.stringify(clientStrings) %>;
+        window.t = function (key, params) {
+            var text = window.T[key] || key;
+            if (!params) { return text; }
+            return text.replace(/\{(\w+)\}/g, function (whole, name) {
+                return Object.prototype.hasOwnProperty.call(params, name) ? params[name] : whole;
+            });
+        };
+
         // What jQuery was here for, without jQuery.
         //
         // The whole use of it was four calls — getJSON, ajax, map and when —
@@ -97,7 +110,7 @@
                 // A deleted category that still has expenses against it has no
                 // name left to show, so it falls in with the uncategorised.
                 nameFor: function (id) {
-                    return (id != null && names[id]) ? names[id] : 'Uncategorized';
+                    return (id != null && names[id]) ? names[id] : t('js.uncategorized');
                 }
             };
         };

@@ -6,6 +6,7 @@ import type { Request, Response, NextFunction } from 'express';
 import { api } from './routes/api.js';
 import { web } from './routes/web.js';
 import { pool } from './db.js';
+import { LANGUAGE_NAMES, LOCALES, direction, localeCookie, pickLocale, subset, translator } from './i18n.js';
 import { accessLog, recordUsage, flushUsage, startUsageFlushing } from './observability.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -29,6 +30,36 @@ app.use(recordUsage());
 app.use(express.json({ limit: '256kb' }));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.static(path.join(here, 'public'), { maxAge: '1h' }));
+
+/*
+ * Language, before anything renders.
+ *
+ * ?lang= is an explicit choice and is remembered for a year; otherwise the
+ * browser's Accept-Language decides. The cookie is the only one this site sets,
+ * it holds a language tag and nothing else, and it is why the privacy page can
+ * still say there is nothing here worth tracking.
+ *
+ * Vary: Accept-Language matters more than it looks — without it a proxy or CDN
+ * can hand the German render to the next visitor who asks in Japanese.
+ */
+app.use((req: Request, res: Response, next: NextFunction) => {
+  const chosen = typeof req.query.lang === 'string' ? req.query.lang : undefined;
+  const locale = pickLocale(req.headers['accept-language'], localeCookie(req.headers.cookie), chosen);
+
+  if (chosen && locale === chosen) {
+    res.cookie('lang', locale, { maxAge: 31_536_000_000, sameSite: 'lax', path: '/' });
+  }
+
+  res.setHeader('Vary', 'Accept-Language');
+  res.locals.locale = locale;
+  res.locals.dir = direction(locale);
+  res.locals.t = translator(locale);
+  // Handed to page scripts, which cannot reach res.locals themselves.
+  res.locals.clientStrings = subset(locale, 'js.');
+  res.locals.languages = LOCALES.map((code) => ({ code, name: LANGUAGE_NAMES[code] }));
+  res.locals.query = req.query;
+  next();
+});
 
 // Browsers ask for /favicon.ico whether or not a link tag says so, and it was
 // 404ing on every page load. Point it at the real icon rather than shipping a

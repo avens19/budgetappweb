@@ -722,3 +722,36 @@ ul.app-links li { margin-bottom: 8px; }
 @media (prefers-reduced-motion: reduce) {
     * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- Language picker ---------- */
+
+/* Every page carries it, so it is deliberately quiet: a select the size of the
+   small print, centred under the content and above the bottom bar. Somebody
+   whose browser already asked for their language never needs to see it, and
+   somebody on a shared or misconfigured device needs it on every page. */
+.langbar {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+}
+
+.langbar__select {
+    -webkit-appearance: none;
+    appearance: none;
+    font: inherit;
+    font-size: 13px;
+    color: var(--on-surface-variant);
+    background: transparent;
+    border: 1px solid var(--outline);
+    border-radius: var(--radius-s);
+    padding: 6px 10px;
+}
+
+.langbar__select:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+
+/* The bottom bar is fixed, so the picker would sit under it on the pages that
+   have one. */
+.bottomnav ~ .langbar,
+body:has(.bottomnav) .langbar { padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
