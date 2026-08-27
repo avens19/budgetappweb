@@ -67,6 +67,29 @@ web.get('/Budget/:id/HowItWorks', asyncRoute(async (req, res) => {
   res.render('howItWorks', { title: 'How this works', budget });
 }));
 
+/*
+ * The weekly-number helper: the sum the tutorial describes, done here instead
+ * of in a spreadsheet. Paired with and without a budget like HowItWorks, and
+ * it hands its answer to whichever form sent it — the landing page when there
+ * is no budget yet, Edit budget when there is.
+ */
+web.get('/WeeklyNumber', (req, res) => {
+  res.render('weeklyNumber', {
+    title: 'Work out a weekly number', budget: null,
+    backHref: '/', targetHref: '/',
+  });
+});
+
+web.get('/Budget/:id/WeeklyNumber', asyncRoute(async (req, res) => {
+  const id = param(req, 'id');
+  const budget = await findBudget(id);
+  if (!budget) return res.sendStatus(404);
+  res.render('weeklyNumber', {
+    title: 'Work out a weekly number', budget,
+    backHref: `/Budget/${id}/Edit`, targetHref: `/Budget/${id}/Edit`,
+  });
+}));
+
 // Where both phones send anyone asking about the other platform, so neither app
 // has to name it — see the comment at the top of apps.ejs. Paired with and
 // without a budget for the same reason as HowItWorks.

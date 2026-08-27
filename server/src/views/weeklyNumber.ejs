@@ -1,0 +1,153 @@
+<%#
+    The weekly-number helper, as both phones have it.
+
+    The site asks for one figure and, outside the tutorial's first card, never
+    says where it comes from. Someone who has not done this sum before either
+    opens a spreadsheet or guesses, and a guessed number is how a budget ends up
+    impossible or meaningless.
+
+    The prompts are named rather than left as two blank boxes for "income" and
+    "expenses" because the failure mode of this sum is omission: nobody forgets
+    the rent, everybody forgets the car insurance until they are asked about it.
+
+    Everything is annualised before it is compared. Pay arrives fortnightly,
+    rent monthly, insurance yearly, and the usual "a month is four weeks"
+    shortcut loses four weeks a year — about 8% of the budget, which is the
+    difference between a number that works and one that runs out every autumn.
+
+    Nothing here is saved. The accepted figure is handed to the budget form as
+    ?amount=, which is the page that owns saving it.
+%>
+<%- include('partials/head') %>
+            <div class="appbar__titles">
+                <h1 class="appbar__title"><a href="<%= backHref %>">Work out a weekly number</a></h1>
+                <% if (budget) { %><span class="appbar__sub"><%= budget.Name || "Weekly Budget" %></span><% } %>
+            </div>
+            <div class="appbar__actions">
+                <a class="btn btn--text" href="<%= backHref %>">Cancel</a>
+            </div>
+<%- include('partials/afterbar') %>
+
+<p class="muted mt-l">
+    Answer whichever of these you know. Anything left blank counts as nothing,
+    and none of it reaches your budget until you press the button at the bottom.
+</p>
+
+<!-- ko foreach: groups -->
+<h2 class="section-head" data-bind="text: title"></h2>
+<p class="muted" style="margin:0 0 8px" data-bind="text: help"></p>
+
+<!-- ko foreach: lines -->
+<div class="field">
+    <label class="field__label" data-bind="text: label, attr: { for: id }"></label>
+    <div style="display:flex; gap:8px; align-items:center">
+        <input class="field__input" type="number" inputmode="decimal" step="0.01"
+               placeholder="0.00" style="flex:1; min-width:0"
+               data-bind="value: amount, valueUpdate: 'input', attr: { id: id }" />
+        <select class="field__input" style="flex:0 0 auto; width:auto"
+                data-bind="options: $root.periods, optionsText: 'label', value: period,
+                           attr: { 'aria-label': 'How often: ' + label }"></select>
+    </div>
+</div>
+<!-- /ko -->
+<!-- /ko -->
+
+<%#
+    The answer stays on screen while the prompts are answered — watching it move
+    is how someone decides whether groceries belong in the sum — so the card is
+    sticky rather than sitting at the end of seventeen fields.
+%>
+<section class="card card--hero mt-l" style="position:sticky; bottom:12px">
+    <div class="hero__label">Left to spend each week</div>
+    <div class="hero__amount" data-bind="text: weeklyText"></div>
+    <div class="hero__foot muted" data-bind="text: note"></div>
+    <div class="form-actions">
+        <button class="btn btn--block" data-bind="click: use, enable: usable">Use this amount</button>
+    </div>
+</section>
+
+<% if (budget) { %>
+<%- include('partials/bottomnav', { budget: budget }) %>
+<% } else { %>
+<%- include('partials/beforenav') %>
+<% } %>
+<%- include('partials/scripts') %>
+<script src="/weekly-number.js"></script>
+<script type="text/javascript">
+    (function () {
+        var W = window.WeeklyNumber;
+
+        // Where an accepted figure goes: the budget form, which reads ?amount=
+        // and fills its own field in. The helper deliberately saves nothing --
+        // it is scratch paper, and the budget is saved on that page.
+        var TARGET = <%- JSON.stringify(targetHref) %>;
+
+        function Line(spec, index) {
+            this.label = spec.label;
+            this.id = 'line' + index;
+            this.amount = ko.observable('');
+            this.period = ko.observable(W.periodByLabel(spec.period));
+        }
+
+        Line.prototype.perYear = function () {
+            return W.perYear(this.amount(), this.period());
+        };
+
+        function PlannerViewModel() {
+            var self = this, index = 0;
+
+            self.periods = W.PERIODS;
+            self.groups = W.GROUPS.map(function (group) {
+                return {
+                    title: group.title,
+                    help: group.help,
+                    income: group.income,
+                    lines: group.lines.map(function (line) { return new Line(line, index++); })
+                };
+            });
+
+            var totals = ko.computed(function () {
+                var income = 0, outgoing = 0;
+                self.groups.forEach(function (group) {
+                    group.lines.forEach(function (line) {
+                        if (group.income) { income += line.perYear(); }
+                        else { outgoing += line.perYear(); }
+                    });
+                });
+                return { income: income, outgoing: outgoing };
+            });
+
+            self.weekly = ko.computed(function () {
+                return W.weekly(totals().income, totals().outgoing);
+            });
+
+            self.weeklyText = ko.computed(function () { return money(self.weekly()); });
+            self.usable = ko.computed(function () { return self.weekly() > 0; });
+
+            // Nothing entered yet is not a finding; more going out than coming
+            // in is, and it is the one this page exists to surface.
+            self.note = ko.computed(function () {
+                var t = totals();
+                if (t.income === 0 && t.outgoing === 0) {
+                    return 'Fill in what you can. The number updates as you type.';
+                }
+                if (self.weekly() <= 0) {
+                    return 'That leaves nothing to spend each week. Check the figures - '
+                         + 'or leave the steady spending out and track it week to week instead.';
+                }
+                return money(t.income / W.MONTHS_PER_YEAR) + ' a month in · '
+                     + money(t.outgoing / W.MONTHS_PER_YEAR) + ' a month out';
+            });
+
+            self.use = function () {
+                if (!self.usable()) { return; }
+                var amount = Math.round(self.weekly() * 100) / 100;
+                window.location.href = TARGET
+                    + (TARGET.indexOf('?') === -1 ? '?' : '&') + 'amount=' + amount.toFixed(2);
+            };
+        }
+
+        ko.applyBindings(new PlannerViewModel());
+    })();
+</script>
+<%- include('partials/foot') %>

@@ -34,6 +34,9 @@
     <label class="field__label" for="amount">Weekly amount</label>
     <input class="field__input" id="amount" type="number" inputmode="decimal" step="0.01"
            data-bind="value: amount" placeholder="0.00" />
+    <%# Directly under the field, because "how much a week?" is the question
+       this page asks that people cannot answer. %>
+    <p class="field__hint" style="margin-top:6px"><a href="/WeeklyNumber">Not sure? Work it out</a></p>
 </div>
 
 <div class="field">
@@ -65,7 +68,13 @@
             this.name = ko.observable('');
             this.startDay = ko.observable("<%= budget.StartDayOfWeek %>");
             this.dates = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-            this.amount = ko.observable("<%= Number(budget.Amount).toFixed(2) %>");
+            // A figure accepted in the helper comes back as ?amount=. Read
+            // once, here, so it cannot fight what the user types afterwards.
+            var suggested = new URLSearchParams(window.location.search).get('amount');
+            this.amount = ko.observable(
+                suggested && !isNaN(parseFloat(suggested))
+                    ? parseFloat(suggested).toFixed(2)
+                    : "<%= Number(budget.Amount).toFixed(2) %>");
             this.uniqueId = ko.observable("<%= budget.UniqueId %>");
             this.saving = ko.observable(false);
 
