@@ -1,4 +1,5 @@
     <script src="/knockout-3.3.0.js"></script>
+    <script src="/money.js"></script>
     <script type="text/javascript">
         // The js.* half of the catalog, for the strings a page script puts on
         // screen itself - alerts, button labels it swaps, the name it shows for
@@ -60,14 +61,10 @@
             return d.getFullYear() + '-' + m + '-' + day;
         };
 
+        // /money.js works out which currency to print — the reader's own,
+        // like the phone apps — and this is the shorthand the bindings use.
         window.money = function (value) {
-            try {
-                return value.toLocaleString(undefined, {
-                    style: 'currency', currency: 'USD', minimumFractionDigits: 2
-                });
-            } catch (e) {
-                return '$' + value.toFixed(2);
-            }
+            return Money.format(value);
         };
 
         window.shortDate = function (d) {

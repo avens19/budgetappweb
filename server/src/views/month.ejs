@@ -3,7 +3,7 @@
                 <h1 class="appbar__title"><a href="/Budget/<%= budget.UniqueId %>"><%= budget.Name || "Weekly Budget" %></a></h1>
             </div>
             <div class="appbar__actions"><button class="btn btn--text" data-bind="click: goToday, visible: !isCurrentMonth()"><%= t('action.today') %></button>
-    <a class="btn btn--icon" href="/Budget/<%= budget.UniqueId %>/Edit" title="Edit budget" aria-label="Edit budget"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zM15 9h2V7h4V5h-4V3h-2v6z"/></svg></a></div>
+    <a class="btn btn--icon" href="/Budget/<%= budget.UniqueId %>/Edit" title="<%= t('editBudget.title') %>" aria-label="<%= t('editBudget.title') %>"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17v2h6v-2H3zM3 5v2h10V5H3zm10 16v-2h8v-2h-8v-2h-2v6h2zM7 9v2H3v2h4v2h2V9H7zm14 4v-2H11v2h10zM15 9h2V7h4V5h-4V3h-2v6z"/></svg></a></div>
 <%- include('partials/afterbar') %>
 <div class="period">
     <button class="btn btn--icon" data-bind="click: monthBack" aria-label="Previous month">&#8249;</button>
@@ -87,7 +87,7 @@
             this.stateLabel = ko.computed(function () {
                 if (self.limit() <= 0) { return ''; }
                 return self.isUnder()
-                    ? money(self.limit() - self.total()) + ' left'
+                    ? t('js.amountLeft').replace('{amount}', money(self.limit() - self.total()))
                     : t('js.overBy').replace('{amount}', money(self.total() - self.limit()));
             });
         }
