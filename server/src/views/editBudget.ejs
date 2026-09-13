@@ -147,8 +147,8 @@
 
             shareBtn.addEventListener('click', function () {
                 navigator.share({
-                    title: 'Join my weekly budget',
-                    text: 'Tap to share my weekly budget:',
+                    title: t('js.inviteShareTitle'),
+                    text: t('js.inviteShareText'),
                     url: urlBox.textContent
                 }).catch(function () { /* the user dismissed the sheet */ });
             });

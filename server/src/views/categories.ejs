@@ -337,7 +337,7 @@
                 api.send('PUT', '/api/Categories/' + category.Id,
                          { id: category.Id, name: name, isDeleted: false })
                     .then(function () { refreshCategories(function () { self.expenses.valueHasMutated(); }); })
-                    .catch(function () { alert('Could not rename that category. Please try again.'); });
+                    .catch(function () { alert(t('js.categoryRenameFailed')); });
             };
 
             this.remove = function (category) {
@@ -346,7 +346,7 @@
                 }
                 api.send('DELETE', '/api/Categories/' + category.Id)
                     .then(function () { refreshCategories(function () { self.expenses.valueHasMutated(); }); })
-                    .catch(function () { alert('Could not delete that category. Please try again.'); });
+                    .catch(function () { alert(t('js.categoryDeleteFailed')); });
             };
 
             /* ----------------------------------------------- period moves */

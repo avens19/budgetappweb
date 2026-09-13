@@ -58,18 +58,18 @@
 
             var NONE = '', NEW = 'new';
             var current = <%- expense.CategoryId == null ? "''" : JSON.stringify(String(expense.CategoryId)) %>;
-            this.categoryOptions = ko.observableArray([{ id: NONE, name: 'No category' }]);
+            this.categoryOptions = ko.observableArray([{ id: NONE, name: t('js.noCategory') }]);
             this.categoryChoice = ko.observable(current);
             this.newCategoryName = ko.observable('');
             this.isNewCategory = ko.computed(function () { return self.categoryChoice() === NEW; });
 
             loadCategories(budgetId, function (rows) {
-                var options = [{ id: NONE, name: 'No category' }];
+                var options = [{ id: NONE, name: t('js.noCategory') }];
                 rows.sort(function (a, b) { return a.Name.localeCompare(b.Name); });
                 for (var i = 0; i < rows.length; i++) {
                     options.push({ id: String(rows[i].Id), name: rows[i].Name });
                 }
-                options.push({ id: NEW, name: 'New category…' });
+                options.push({ id: NEW, name: t('js.newCategory') });
                 self.categoryOptions(options);
                 // Re-assert the selection: the options only exist now, and
                 // Knockout drops a value that was not among them.
