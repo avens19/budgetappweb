@@ -87,6 +87,30 @@ fixed width. Do not switch to a variable-width format.
 `DateUpdated`, and returns the row. It does not remove it — that is what lets
 the change feed tell other devices about the deletion.
 
+## Carried balance
+
+Not an endpoint: a convention the three clients share, written as an ordinary
+expense. Moving a week's balance forward is a `POST /api/expense` dated to the
+**first day of the following week**, with `IsSystem: true`, description
+"Carried Balance" (in the writer's language) and an `Amount` that is the
+**negative of what was left**. A surplus is a negative amount, which lowers the
+week's spending; a deficit is positive, which raises it.
+
+A budget opts in with **`CarryBalance`**, a `bool` on the budget that is never
+null on the wire and is **off unless set**. `POST /api/budget` accepts it, and
+`PUT /api/budget/{id}` changes it only when the body mentions it: releases
+already in the field save the whole budget without the property, and reading
+its absence as "off" would switch it off whenever one of them renamed the
+budget. The clients re-read the budget at the start of every sync, so a change
+made on one device reaches the others.
+
+When it is on, each client carries the previous week into the current one by
+itself the first time it loads the new week, so any of them may write it. They avoid doing it
+twice by looking for an `IsSystem` expense already in the week, and (on the
+phones) by waiting until a sync has finished so another device's carry has
+arrived. A budget with no expense dated before the current week is skipped,
+since an empty week would otherwise read as a whole unspent allowance.
+
 ## Known bug to fix in the rewrite
 
 `DELETE /api/budget/{id}` attempts a hard delete with no cascade, so it

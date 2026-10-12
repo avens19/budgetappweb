@@ -34,6 +34,8 @@
   "budget.name.example": "Household",
   "budget.save": "Save budget",
   "budget.startDay": "Week starts on",
+  "budget.carryBalance": "Carry balance forward automatically",
+  "budget.carryBalance.hint": "Each new week starts with what was left over, or overspent, the week before.",
   "categories.empty.body": "Once you tag expenses with a category, the breakdown appears here.",
   "categories.empty.title": "Nothing to chart yet",
   "categories.manage.empty.body": "Create a category while adding an expense and it will appear here.",

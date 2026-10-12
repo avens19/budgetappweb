@@ -34,6 +34,8 @@
   "budget.name.example": "생활비",
   "budget.save": "예산 저장",
   "budget.startDay": "주 시작 요일",
+  "budget.carryBalance": "잔액 자동 이월",
+  "budget.carryBalance.hint": "새로운 한 주는 지난주에 남은 금액이나 초과한 금액에서 시작해요.",
   "categories.empty.body": "지출에 카테고리를 붙이면 여기에 분포가 나와요.",
   "categories.empty.title": "아직 보여줄 것이 없어요",
   "categories.manage.empty.body": "지출을 추가할 때 카테고리를 만들면 여기에 나타나요.",

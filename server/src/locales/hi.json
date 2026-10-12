@@ -34,6 +34,8 @@
   "budget.name.example": "घर",
   "budget.save": "बजट सहेजें",
   "budget.startDay": "सप्ताह शुरू होता है",
+  "budget.carryBalance": "बची रकम अपने-आप आगे ले जाएँ",
+  "budget.carryBalance.hint": "हर नया सप्ताह पिछले सप्ताह की बची हुई या ज़्यादा खर्च की गई रकम के साथ शुरू होता है।",
   "categories.empty.body": "जैसे ही खर्चों पर श्रेणी लगेगी, यहाँ बँटवारा दिखेगा।",
   "categories.empty.title": "अभी दिखाने को कुछ नहीं",
   "categories.manage.empty.body": "खर्च जोड़ते समय श्रेणी बनाएँ, वह यहाँ आ जाएगी।",

@@ -34,6 +34,8 @@
   "budget.name.example": "Casa",
   "budget.save": "Salvar orçamento",
   "budget.startDay": "A semana começa em",
+  "budget.carryBalance": "Transferir o saldo automaticamente",
+  "budget.carryBalance.hint": "Cada nova semana começa com o que sobrou, ou foi gasto a mais, na semana anterior.",
   "categories.empty.body": "Depois de marcar gastos com uma categoria, a divisão aparece aqui.",
   "categories.empty.title": "Ainda não há nada para mostrar",
   "categories.manage.empty.body": "Crie uma categoria ao adicionar um gasto e ela aparece aqui.",

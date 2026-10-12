@@ -34,6 +34,8 @@
   "budget.name.example": "Haushalt",
   "budget.save": "Budget speichern",
   "budget.startDay": "Woche beginnt am",
+  "budget.carryBalance": "Rest automatisch übertragen",
+  "budget.carryBalance.hint": "Jede neue Woche beginnt mit dem, was in der Vorwoche übrig geblieben ist oder zu viel ausgegeben wurde.",
   "categories.empty.body": "Sobald Ausgaben eine Kategorie haben, erscheint hier die Aufteilung.",
   "categories.empty.title": "Noch nichts zu zeigen",
   "categories.manage.empty.body": "Leg beim Eintragen einer Ausgabe eine Kategorie an, dann steht sie hier.",

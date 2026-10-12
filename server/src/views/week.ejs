@@ -58,6 +58,7 @@
 </div>
 <%- include('partials/bottomnav', { budget: budget, active: 'week' }) %>
 <%- include('partials/scripts') %>
+<script src="/carry.js"></script>
 <script type="text/javascript">
         function Expense(data) {
             var date = new Date(data.Date);
@@ -73,6 +74,8 @@
             var self = this;
 
             this.budgetId = "<%= budget.UniqueId %>";
+            // Off unless the budget's settings turn it on.
+            var carryBalance = <%= budget.CarryBalance ? 'true' : 'false' %>;
             this.expenses = ko.observableArray();
 
             // Categories change far less often than expenses, so they are
@@ -162,14 +165,29 @@
                 return groups;
             });
 
+            // Asked for at noon: the server reads the instant as a UTC date, and
+            // local midnight is the previous day for anyone east of Greenwich.
+            function weekRows(start) {
+                var noon = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 12);
+                return api.get("/api/Budget/<%= budget.UniqueId %>/Week/" + noon.getTime());
+            }
+
+            // Whether the following week already holds a carry, so the Carry
+            // button is not offered for a balance that has been moved.
+            this.carriedOn = ko.observable(false);
+
             function loadData() {
-                api.get("/api/Budget/<%= budget.UniqueId %>/Week/" + self.weekStart().getTime())
-                    .then(function (allData) {
-                        self.expenses(allData.map(function (item) { return new Expense(item); }));
+                var start = self.weekStart();
+                return Promise.all([weekRows(start), weekRows(start.addDays(7))])
+                    .then(function (weeks) {
+                        // Ignore an answer for a week the reader has since left.
+                        if (start !== self.weekStart()) { return; }
+                        self.expenses(weeks[0].map(function (item) { return new Expense(item); }));
+                        self.carriedOn(Carry.hasCarry(weeks[1]));
                     });
             }
 
-            loadData();
+            loadData().then(autoCarry);
 
             // showPicker opens the native calendar straight away where it is
             // supported; focusing the input is the fallback everywhere else.
@@ -215,8 +233,57 @@
             };
 
             this.canCarry = ko.computed(function () {
-                return self.isUnder() && self.remaining() >= 0.01;
+                return self.isUnder() && self.remaining() >= 0.01 && !self.carriedOn();
             });
+
+            // When the budget has asked for it, the first time a week is opened
+            // last week's balance moves into it by itself - a surplus or a
+            // deficit - so nobody has to remember to tap Carry. Once per budget
+            // per week, remembered in
+            // this browser: a carry the reader deleted stays deleted, which a
+            // look at the week's expenses alone could not tell apart from one
+            // that was never made.
+            function autoCarry() {
+                var start = self.weekStart();
+                var thisWeek = toDateInput(start);
+                var key = 'carried:' + self.budgetId;
+                var seen = function () {
+                    try { return localStorage.getItem(key) === thisWeek; } catch (e) { return false; }
+                };
+                var remember = function () {
+                    try { localStorage.setItem(key, thisWeek); } catch (e) { /* private mode */ }
+                };
+                if (!carryBalance || !self.isCurrentWeek() || seen()) { return; }
+
+                Promise.all([weekRows(start.addDays(-7)), weekRows(start)])
+                    .then(function (weeks) {
+                        var previous = weeks[0];
+                        var amount = Carry.amountToCarry(self.limit(), previous);
+
+                        // Another device, or the Carry button, got there first.
+                        if (Carry.hasCarry(weeks[1]) || amount === 0) { remember(); return; }
+
+                        // A week with expenses proves the budget is older than
+                        // that week; only an empty one needs the longer look.
+                        var established = previous.length > 0
+                            ? Promise.resolve(true)
+                            : api.get('/api/Budget/' + self.budgetId + '/Expenses?watermark=')
+                                .then(function (all) { return Carry.hasEarlierExpense(all, thisWeek); });
+
+                        return established.then(function (isOlder) {
+                            if (!isOlder) { remember(); return; }
+                            return api.send('POST', '/api/Expense', {
+                                date: thisWeek,
+                                description: t('js.carriedBalance'),
+                                amount: amount,
+                                budgetId: self.budgetId,
+                                isSystem: true
+                            }).then(function () { remember(); return loadData(); });
+                        });
+                    })
+                    // Not remembered, so the next visit tries again.
+                    .catch(function () {});
+            }
 
             // Carrying is a negative expense on the first day of the following
             // week, which is how the app does it: an expense of -X raises next
@@ -234,7 +301,7 @@
                     budgetId: self.budgetId,
                     isSystem: true
                 })
-                    .then(function () { loadData(); })
+                    .then(function () { return loadData(); })
                     .catch(function () { alert(t('js.carryFailed')); });
             };
         }

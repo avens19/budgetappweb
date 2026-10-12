@@ -34,6 +34,8 @@
   "budget.name.example": "Dom",
   "budget.save": "Zapisz budżet",
   "budget.startDay": "Tydzień zaczyna się w",
+  "budget.carryBalance": "Przenoś saldo automatycznie",
+  "budget.carryBalance.hint": "Każdy nowy tydzień zaczyna się od tego, co zostało, lub co przekroczono, w poprzednim tygodniu.",
   "categories.empty.body": "Gdy wydatki dostaną kategorie, pojawi się tu podział.",
   "categories.empty.title": "Nie ma jeszcze czego pokazać",
   "categories.manage.empty.body": "Utwórz kategorię przy dodawaniu wydatku, a znajdzie się tutaj.",
