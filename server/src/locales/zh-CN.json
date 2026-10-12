@@ -42,6 +42,7 @@
   "categories.manage.empty.title": "还没有分类",
   "categories.period": "时间段",
   "categories.tapHint": "点按分类可以查看它的支出",
+  "delete.title": "删除你的数据",
   "editBudget.title": "编辑预算",
   "editExpense.save": "保存修改",
   "editExpense.title": "编辑支出",

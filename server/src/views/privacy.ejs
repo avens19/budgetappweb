@@ -5,7 +5,7 @@
             <div class="appbar__actions"></div>
 <%- include('partials/afterbar') %>
 <article class="prose">
-    <p class="muted">Last updated 19 August 2026.</p>
+    <p class="muted">Last updated 12 October 2026.</p>
 
     <% if (locale !== 'en') { %>
     <p class="muted"><em><%= t('privacy.englishOnly') %></em></p>
@@ -68,7 +68,8 @@
     <p>Unused invitations are deleted once they expire, and used ones are cleared
        out as soon as another is created for the same budget.</p>
     <p>To delete a budget and everything in it, email the address below with the
-       budget ID and it will be removed. Removing a budget from a single device
+       budget ID and it will be removed. <a href="/delete">How to ask, and exactly
+       what is and is not deleted</a>. Removing a budget from a single device
        (in the app's settings) leaves the budget itself intact for anyone else
        using it.</p>
 

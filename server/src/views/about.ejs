@@ -39,7 +39,9 @@
        &middot;
        <a href="<%= budget ? '/Budget/' + budget.UniqueId + '/Apps' : '/Apps' %>"><%= t('apps.title') %></a>
        &middot;
-       <a href="/privacy"><%= t('privacy.title') %></a></p>
+       <a href="/privacy"><%= t('privacy.title') %></a>
+       &middot;
+       <a href="/delete"><%= t('delete.title') %></a></p>
 </article>
 <% if (budget) { %>
 <%- include('partials/bottomnav', { budget: budget }) %>
