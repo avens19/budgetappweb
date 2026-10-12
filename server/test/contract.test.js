@@ -49,9 +49,10 @@ test('budget: create returns 201 and the PascalCase shape', async () => {
   await withBudget(async (id) => {
     const { json } = await call('GET', `/api/budget/${id}`);
     assert.deepEqual(Object.keys(json).sort(), [
-      'Amount', 'DateCreated', 'DateUpdated', 'Name',
+      'Amount', 'CarryBalance', 'DateCreated', 'DateUpdated', 'Name',
       'StartDay', 'StartDayOfWeek', 'UniqueId',
     ]);
+    assert.equal(json.CarryBalance, false, 'off unless a client turns it on');
     assert.equal(json.StartDay, 1);
     assert.equal(json.StartDayOfWeek, 'Monday', 'the web form binds to this string');
     assert.equal(typeof json.Amount, 'number');
@@ -75,6 +76,41 @@ test('budget: PUT returns 204 with an empty body', async () => {
     assert.equal(json.Name, 'Renamed');
     assert.equal(json.StartDayOfWeek, 'Thursday');
   });
+});
+
+test('budget: CarryBalance can be set on create and changed by PUT', async () => {
+  const id = randomUUID();
+  try {
+    const created = await call('POST', '/api/budget',
+      { UniqueId: id, Name: 'Carry', StartDay: 0, Amount: 100, CarryBalance: true });
+    assert.equal(created.json.CarryBalance, true);
+
+    // The web app sends camelCase to the same endpoints.
+    await call('PUT', `/api/budget/${id}`, { uniqueId: id, name: 'Carry', amount: 100, carryBalance: false });
+    assert.equal((await call('GET', `/api/budget/${id}`)).json.CarryBalance, false);
+
+    await call('PUT', `/api/budget/${id}`, { UniqueId: id, Name: 'Carry', StartDay: 0, Amount: 100, CarryBalance: true });
+    assert.equal((await call('GET', `/api/budget/${id}`)).json.CarryBalance, true);
+  } finally {
+    await call('DELETE', `/api/budget/${id}`);
+  }
+});
+
+// Releases already in the field save the whole budget without this property.
+// Reading its absence as "off" would switch it off whenever one of them renamed
+// the budget.
+test('budget: a PUT that does not mention CarryBalance leaves it alone', async () => {
+  const id = randomUUID();
+  try {
+    await call('POST', '/api/budget',
+      { UniqueId: id, Name: 'Carry', StartDay: 0, Amount: 100, CarryBalance: true });
+    const { res } = await call('PUT', `/api/budget/${id}`,
+      { UniqueId: id, Name: 'Renamed by an old client', StartDay: 0, Amount: 100 });
+    assert.equal(res.status, 204);
+    assert.equal((await call('GET', `/api/budget/${id}`)).json.CarryBalance, true);
+  } finally {
+    await call('DELETE', `/api/budget/${id}`);
+  }
 });
 
 test('budget: PUT accepts StartDayOfWeek, which is what the web app sends', async () => {

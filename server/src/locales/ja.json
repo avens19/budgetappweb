@@ -34,6 +34,8 @@
   "budget.name.example": "家計",
   "budget.save": "予算を保存",
   "budget.startDay": "週の始まり",
+  "budget.carryBalance": "残りを自動で繰り越す",
+  "budget.carryBalance.hint": "新しい週は、前の週の残り(または使いすぎた分)から始まります。",
   "categories.empty.body": "支出にカテゴリを付けると、ここに内訳が出ます。",
   "categories.empty.title": "まだ表示するものがありません",
   "categories.manage.empty.body": "支出の追加時にカテゴリを作ると、ここに表示されます。",

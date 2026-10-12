@@ -34,6 +34,8 @@
   "budget.name.example": "Huishouden",
   "budget.save": "Budget opslaan",
   "budget.startDay": "Week begint op",
+  "budget.carryBalance": "Saldo automatisch doorschuiven",
+  "budget.carryBalance.hint": "Elke nieuwe week begint met wat er de week ervoor over was, of te veel is uitgegeven.",
   "categories.empty.body": "Zodra je uitgaven een categorie geeft, verschijnt de verdeling hier.",
   "categories.empty.title": "Nog niets te tonen",
   "categories.manage.empty.body": "Maak een categorie terwijl je een uitgave toevoegt; daarna staat hij hier.",

@@ -34,6 +34,8 @@
   "budget.name.example": "Rumah tangga",
   "budget.save": "Simpan anggaran",
   "budget.startDay": "Minggu dimulai hari",
+  "budget.carryBalance": "Bawa sisa ke depan secara otomatis",
+  "budget.carryBalance.hint": "Setiap minggu baru dimulai dengan sisa, atau kelebihan pengeluaran, dari minggu sebelumnya.",
   "categories.empty.body": "Begitu pengeluaran punya kategori, rinciannya muncul di sini.",
   "categories.empty.title": "Belum ada yang bisa ditampilkan",
   "categories.manage.empty.body": "Buat kategori saat menambah pengeluaran, nanti muncul di sini.",

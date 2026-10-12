@@ -24,6 +24,14 @@
     <select class="field__input" id="startDay" data-bind="options: dates, value: startDay"></select>
 </div>
 
+<div class="field">
+    <label class="field__check" for="carryBalance">
+        <input type="checkbox" id="carryBalance" data-bind="checked: carryBalance" />
+        <span><%= t('budget.carryBalance') %></span>
+    </label>
+    <p class="field__hint"><%= t('budget.carryBalance.hint') %></p>
+</div>
+
 <section class="card">
     <div class="id-card">
         <div>
@@ -87,6 +95,7 @@
                 suggested && !isNaN(parseFloat(suggested))
                     ? parseFloat(suggested).toFixed(2)
                     : "<%= Number(budget.Amount).toFixed(2) %>");
+            this.carryBalance = ko.observable(<%= budget.CarryBalance ? 'true' : 'false' %>);
             this.uniqueId = ko.observable(uniqueId);
             this.saving = ko.observable(false);
 
@@ -101,6 +110,7 @@
                     name: self.name() || 'My',
                     startDayOfWeek: self.startDay(),
                     amount: parseFloat(self.amount()),
+                    carryBalance: self.carryBalance(),
                     uniqueId: uniqueId
                 })
                     .then(function () { window.location.href = '/Budget/' + uniqueId; })

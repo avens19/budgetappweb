@@ -34,6 +34,8 @@
   "budget.name.example": "Ev",
   "budget.save": "Bütçeyi kaydet",
   "budget.startDay": "Hafta şu gün başlar",
+  "budget.carryBalance": "Bakiyeyi otomatik devret",
+  "budget.carryBalance.hint": "Her yeni hafta, önceki haftadan kalan ya da aşılan tutarla başlar.",
   "categories.empty.body": "Harcamalara kategori verdiğinde dağılım burada belirir.",
   "categories.empty.title": "Henüz gösterecek bir şey yok",
   "categories.manage.empty.body": "Harcama eklerken bir kategori oluştur, burada görünsün.",

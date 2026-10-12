@@ -34,6 +34,8 @@
   "budget.name.example": "Maison",
   "budget.save": "Enregistrer le budget",
   "budget.startDay": "La semaine commence le",
+  "budget.carryBalance": "Reporter le solde automatiquement",
+  "budget.carryBalance.hint": "Chaque nouvelle semaine commence avec ce qu'il restait, ou ce qui a été dépensé en trop, la semaine précédente.",
   "categories.empty.body": "Dès que vos dépenses portent une catégorie, la répartition apparaît ici.",
   "categories.empty.title": "Rien à afficher pour l'instant",
   "categories.manage.empty.body": "Créez une catégorie en ajoutant une dépense et elle apparaîtra ici.",

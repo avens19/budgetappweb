@@ -34,6 +34,8 @@
   "budget.name.example": "المنزل",
   "budget.save": "حفظ الميزانية",
   "budget.startDay": "يبدأ الأسبوع يوم",
+  "budget.carryBalance": "ترحيل الرصيد تلقائيًا",
+  "budget.carryBalance.hint": "يبدأ كل أسبوع جديد بما تبقّى من الأسبوع السابق أو بما زاد عليه.",
   "categories.empty.body": "بمجرد وضع فئات للمصروفات سيظهر التوزيع هنا.",
   "categories.empty.title": "لا شيء لعرضه بعد",
   "categories.manage.empty.body": "أنشئ فئة أثناء إضافة مصروف وستظهر هنا.",

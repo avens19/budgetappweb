@@ -34,6 +34,8 @@
   "budget.name.example": "Gia đình",
   "budget.save": "Lưu ngân sách",
   "budget.startDay": "Tuần bắt đầu vào",
+  "budget.carryBalance": "Tự động chuyển số dư sang tuần sau",
+  "budget.carryBalance.hint": "Mỗi tuần mới bắt đầu với số tiền còn lại, hoặc chi vượt, của tuần trước.",
   "categories.empty.body": "Khi các khoản chi có danh mục, tỷ lệ sẽ hiện ở đây.",
   "categories.empty.title": "Chưa có gì để hiển thị",
   "categories.manage.empty.body": "Tạo danh mục khi thêm khoản chi, nó sẽ xuất hiện ở đây.",

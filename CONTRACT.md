@@ -96,8 +96,16 @@ expense. Moving a week's balance forward is a `POST /api/expense` dated to the
 **negative of what was left**. A surplus is a negative amount, which lowers the
 week's spending; a deficit is positive, which raises it.
 
-Each client carries the previous week into the current one by itself the first
-time it loads the new week, so any of them may write it. They avoid doing it
+A budget opts in with **`CarryBalance`**, a `bool` on the budget that is never
+null on the wire and is **off unless set**. `POST /api/budget` accepts it, and
+`PUT /api/budget/{id}` changes it only when the body mentions it: releases
+already in the field save the whole budget without the property, and reading
+its absence as "off" would switch it off whenever one of them renamed the
+budget. The clients re-read the budget at the start of every sync, so a change
+made on one device reaches the others.
+
+When it is on, each client carries the previous week into the current one by
+itself the first time it loads the new week, so any of them may write it. They avoid doing it
 twice by looking for an `IsSystem` expense already in the week, and (on the
 phones) by waiting until a sync has finished so another device's carry has
 arrived. A budget with no expense dated before the current week is skipped,

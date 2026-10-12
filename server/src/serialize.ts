@@ -13,6 +13,7 @@ const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday',
 /** A row as it comes out of Postgres, before it is shaped for the wire. */
 export interface BudgetRow {
   UniqueId: string; Name: string; StartDay: number; Amount: number;
+  CarryBalance: boolean;
   DateCreated: string | null; DateUpdated: string | null;
 }
 
@@ -83,6 +84,8 @@ export function budget(row: BudgetRow | undefined): unknown {
     Name: row.Name,
     StartDay: row.StartDay,
     Amount: row.Amount,
+    // Never null on the wire, like IsDeleted: a client reads it as a bool.
+    CarryBalance: Boolean(row.CarryBalance),
     DateCreated: timestamp(row.DateCreated),
     DateUpdated: timestamp(row.DateUpdated),
     // Computed on the C# model and present in every payload. The web app's

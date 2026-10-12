@@ -74,6 +74,8 @@
             var self = this;
 
             this.budgetId = "<%= budget.UniqueId %>";
+            // Off unless the budget's settings turn it on.
+            var carryBalance = <%= budget.CarryBalance ? 'true' : 'false' %>;
             this.expenses = ko.observableArray();
 
             // Categories change far less often than expenses, so they are
@@ -234,9 +236,10 @@
                 return self.isUnder() && self.remaining() >= 0.01 && !self.carriedOn();
             });
 
-            // The first time a week is opened, last week's balance moves into
-            // it by itself - a surplus or a deficit - so nobody has to
-            // remember to tap Carry. Once per budget per week, remembered in
+            // When the budget has asked for it, the first time a week is opened
+            // last week's balance moves into it by itself - a surplus or a
+            // deficit - so nobody has to remember to tap Carry. Once per budget
+            // per week, remembered in
             // this browser: a carry the reader deleted stays deleted, which a
             // look at the week's expenses alone could not tell apart from one
             // that was never made.
@@ -250,7 +253,7 @@
                 var remember = function () {
                     try { localStorage.setItem(key, thisWeek); } catch (e) { /* private mode */ }
                 };
-                if (!self.isCurrentWeek() || seen()) { return; }
+                if (!carryBalance || !self.isCurrentWeek() || seen()) { return; }
 
                 Promise.all([weekRows(start.addDays(-7)), weekRows(start)])
                     .then(function (weeks) {

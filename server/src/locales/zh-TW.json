@@ -34,6 +34,8 @@
   "budget.name.example": "家用",
   "budget.save": "儲存預算",
   "budget.startDay": "每週開始於",
+  "budget.carryBalance": "自動結轉餘額",
+  "budget.carryBalance.hint": "每個新的一週都會從上週剩下或超支的金額開始。",
   "categories.empty.body": "幫支出加上分類後，這裡會顯示比例。",
   "categories.empty.title": "目前沒有可顯示的內容",
   "categories.manage.empty.body": "新增支出時建立分類，它就會出現在這裡。",

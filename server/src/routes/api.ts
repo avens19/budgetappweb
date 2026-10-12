@@ -52,11 +52,11 @@ api.post('/budget', asyncRoute(async (req, res) => {
   if (!uniqueId) return res.status(400).json({ Message: 'UniqueId is required' });
 
   const created = await query(
-    `insert into "Budgets" ("UniqueId","Name","StartDay","Amount","DateCreated","DateUpdated")
-     values ($1,$2,$3,$4, now(), now())
+    `insert into "Budgets" ("UniqueId","Name","StartDay","Amount","CarryBalance","DateCreated","DateUpdated")
+     values ($1,$2,$3,$4,$5, now(), now())
      returning *`,
     [uniqueId, wire.field(b, 'Name') ?? 'My', wire.startDayFrom(b),
-     Number(wire.field(b, 'Amount') ?? 0)]
+     Number(wire.field(b, 'Amount') ?? 0), Boolean(wire.field(b, 'CarryBalance'))]
   ).catch((err: { code?: string }) => {
     // 23505 unique_violation: the old server answered 409 here.
     if (err.code === '23505') return null;
@@ -82,10 +82,15 @@ api.put('/budget/:id', asyncRoute(async (req, res) => {
 
   const { rowCount } = await query(
     `update "Budgets"
-        set "Name" = $2, "StartDay" = $3, "Amount" = $4, "DateUpdated" = now()
+        set "Name" = $2, "StartDay" = $3, "Amount" = $4,
+            "CarryBalance" = coalesce($5, "CarryBalance"), "DateUpdated" = now()
       where "UniqueId" = $1`,
+    // Only changed when the body says so. Releases already in the field send
+    // the whole budget without this property, and reading that as "off" would
+    // switch it off every time one of them saved a new name.
     [req.params.id, wire.field(b, 'Name') ?? 'My', wire.startDayFrom(b),
-     Number(wire.field(b, 'Amount') ?? 0)]
+     Number(wire.field(b, 'Amount') ?? 0),
+     wire.field(b, 'CarryBalance') == null ? null : Boolean(wire.field(b, 'CarryBalance'))]
   );
   if (!rowCount) return res.sendStatus(404);
   // Must be an empty body: API.EditBudget throws on anything else.
