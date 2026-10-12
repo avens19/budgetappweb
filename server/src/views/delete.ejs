@@ -1,0 +1,76 @@
+<%- include('partials/head') %>
+            <div class="appbar__titles">
+                <h1 class="appbar__title"><a href="/"><%= t('delete.title') %></a></h1>
+            </div>
+            <div class="appbar__actions"></div>
+<%- include('partials/afterbar') %>
+<%# English only, for the reason given on the privacy page: this states what
+   happens to someone's data, and a translation that drifted would say something
+   untrue. It is the page Google Play's "delete account" link points at, so it
+   has to name the steps, what is removed, and what is kept. %>
+<article class="prose">
+    <p class="muted">Last updated 12 October 2026.</p>
+
+    <% if (locale !== 'en') { %>
+    <p class="muted"><em><%= t('privacy.englishOnly') %></em></p>
+    <% } %>
+    <p>Weekly Budget has no accounts, so there is no account to close. Everything
+       you enter is stored against a <strong>budget</strong>, which is identified by
+       its budget ID. Deleting your data means deleting your budget, and that is
+       done by asking for it.</p>
+
+    <h2>How to ask</h2>
+    <ol>
+        <li><strong>Find the budget ID.</strong> Open the budget's settings:
+            <em>Edit budget</em> in the Android app and on the website, or the
+            gear icon in the iPhone app. The ID is shown there and can be copied.</li>
+        <li><strong>Email it.</strong> Send the ID to
+            <a href="mailto:avens19@gmail.com?subject=Delete%20my%20budget">avens19@gmail.com</a>
+            with the subject <em>Delete my budget</em>. If you use more than one
+            budget, send each ID.</li>
+        <li><strong>Wait for the reply.</strong> You will get an email back once
+            the budget has been deleted.</li>
+    </ol>
+    <p>The budget ID is what proves the budget is yours, which is why no name or
+       password is needed, and why you should not share the ID with anyone you
+       would not want to be able to read the budget.</p>
+    <p><strong>A budget can be shared.</strong> If you gave the ID, or an invitation,
+       to a partner or anyone else, deleting the budget deletes it for them too.</p>
+
+    <h2>What is deleted</h2>
+    <p>The budget itself and everything stored with it:</p>
+    <ul>
+        <li>its name, weekly amount, and the weekday its week starts on;</li>
+        <li>every expense, with its description, amount, date and category;</li>
+        <li>every category;</li>
+        <li>every invitation, used or not.</li>
+    </ul>
+    <p>It is removed from the server's database. Once that is done the budget ID
+       stops working, and nobody can open the budget again with it.</p>
+    <p>A phone that already had the budget keeps its own downloaded copy until
+       it is removed there, with <em>Remove from this device</em> in the app.
+       Deleting on the server does not reach into a phone and wipe that copy.</p>
+
+    <h2>What is kept</h2>
+    <p>Two things survive deleting a budget, and neither contains anything you
+       typed:</p>
+    <ul>
+        <li>Daily request counts for the whole service: how many requests were
+            handled on a given day, for which screens, from which kind of app.
+            They are not tied to you, to a device, or to a budget.</li>
+        <li>A record that a budget ID was in use on a given day: a date and the
+            ID, and nothing else. It is how "how many budgets are active" is
+            counted. It is not removed along with the budget; ask in the same
+            email if you want it removed too.</li>
+    </ul>
+    <p>Nothing else is kept after a budget is deleted. See the
+       <a href="/privacy">privacy policy</a> for everything the service stores
+       while a budget exists.</p>
+
+    <h2>Removing it from one device only</h2>
+    <p><em>Remove from this device</em> takes a budget off one phone and leaves
+       it on the server for everyone else using it. It is not a deletion.</p>
+</article>
+<%- include('partials/beforenav') %>
+<%- include('partials/scripts') %>
+<%- include('partials/foot') %>

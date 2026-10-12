@@ -42,6 +42,7 @@
   "categories.manage.empty.title": "Категорий пока нет",
   "categories.period": "Период",
   "categories.tapHint": "Нажми на категорию, чтобы увидеть её расходы",
+  "delete.title": "Удаление ваших данных",
   "editBudget.title": "Изменить бюджет",
   "editExpense.save": "Сохранить изменения",
   "editExpense.title": "Изменить расход",

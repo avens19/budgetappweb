@@ -42,6 +42,7 @@
   "categories.manage.empty.title": "No categories yet",
   "categories.period": "Period",
   "categories.tapHint": "Tap a category to see its expenses",
+  "delete.title": "Delete your data",
   "editBudget.title": "Edit budget",
   "editExpense.save": "Save changes",
   "editExpense.title": "Edit expense",

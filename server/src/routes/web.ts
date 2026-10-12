@@ -55,6 +55,12 @@ web.get('/privacy', (req, res) => {
   res.render('privacy', { title: res.locals.t('privacy.title') });
 });
 
+// What Google Play's "delete account" link points at. There are no accounts, so
+// this says how to have a budget deleted, and what is and is not removed.
+web.get('/delete', (req, res) => {
+  res.render('delete', { title: res.locals.t('delete.title') });
+});
+
 // Reachable with or without a budget: the landing page links here before one
 // exists, and the app bar has to know where "Done" goes back to.
 web.get('/HowItWorks', (req, res) => {

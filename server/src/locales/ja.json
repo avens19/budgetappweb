@@ -42,6 +42,7 @@
   "categories.manage.empty.title": "カテゴリがまだありません",
   "categories.period": "期間",
   "categories.tapHint": "カテゴリをタップすると、その支出を表示します",
+  "delete.title": "データを削除する",
   "editBudget.title": "予算を編集",
   "editExpense.save": "変更を保存",
   "editExpense.title": "支出を編集",
